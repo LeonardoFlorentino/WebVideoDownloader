@@ -81,6 +81,7 @@ version = "0.1.0"
 dependencies = [
  "futures-util",
  "log",
+ "regex",
  "reqwest 0.11.27",
  "serde",
  "serde_json",
