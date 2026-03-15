@@ -1,0 +1,12 @@
+# Ignora build e vídeos baixados
+/target/
+Vídeos baixados/
+*.exe
+*.dll
+*.pdb
+*.so
+*.dylib
+*.a
+*.lib
+*.o
+*.obj
