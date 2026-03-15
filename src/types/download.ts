@@ -1,4 +1,4 @@
-export type Download = {
+export interface Download {
   id: number;
   url: string;
   ext: string;
@@ -6,4 +6,4 @@ export type Download = {
   progress: number;
   status: string;
   canceled: boolean;
-};
+}
