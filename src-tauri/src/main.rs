@@ -1,3 +1,108 @@
+#[derive(Serialize, Deserialize, Clone)]
+struct User {
+	username: String,
+	password: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+struct UserList {
+	users: Vec<User>,
+}
+
+#[command]
+fn cadastrar_usuario(username: String, password: String) -> Result<(), String> {
+	let path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("src-tauri/src/user.json");
+	// Garante que o diretório existe
+	if let Some(parent) = path.parent() {
+		std::fs::create_dir_all(parent).map_err(|e| format!("Erro ao criar diretório: {}", e))?;
+	}
+	let mut user_list: UserList = if let Ok(data) = std::fs::read_to_string(&path) {
+		serde_json::from_str(&data).unwrap_or_default()
+	} else {
+		UserList::default()
+	};
+	if user_list.users.iter().any(|u| u.username == username) {
+		return Err("Usuário já cadastrado".to_string());
+	}
+	user_list.users.push(User { username, password });
+	let json = serde_json::to_string_pretty(&user_list).map_err(|e| e.to_string())?;
+	std::fs::write(&path, json).map_err(|e| e.to_string())?;
+	Ok(())
+}
+
+#[command]
+fn autenticar_usuario(username: String, password: String) -> Result<(), String> {
+	let path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("src-tauri/src/user.json");
+	// Garante que o diretório existe
+	if let Some(parent) = path.parent() {
+		std::fs::create_dir_all(parent).map_err(|e| format!("Erro ao criar diretório: {}", e))?;
+	}
+	let user_list: UserList = if let Ok(data) = std::fs::read_to_string(&path) {
+		serde_json::from_str(&data).unwrap_or_default()
+	} else {
+		UserList::default()
+	};
+	if user_list.users.iter().any(|u| u.username == username && u.password == password) {
+		Ok(())
+	} else {
+		Err("Usuário ou senha inválidos".to_string())
+	}
+}
+use serde::{Deserialize, Serialize};
+
+#[allow(dead_code)]
+#[derive(Serialize, Deserialize, Clone)]
+struct Playlist {
+	title: String,
+	downloaded: bool,
+}
+
+#[allow(dead_code)]
+#[command]
+fn marcar_playlist_baixada(title: String) -> Result<(), String> {
+	let path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("src-tauri/src/playlist.json");
+	let mut playlists: Vec<Playlist> = if let Ok(data) = std::fs::read_to_string(&path) {
+		serde_json::from_str(&data).unwrap_or_default()
+	} else {
+		Vec::new()
+	};
+	for pl in playlists.iter_mut() {
+		if pl.title == title {
+			pl.downloaded = true;
+		}
+	}
+	let json = serde_json::to_string_pretty(&playlists).map_err(|e| e.to_string())?;
+	std::fs::write(&path, json).map_err(|e| e.to_string())?;
+	Ok(())
+}
+
+#[allow(dead_code)]
+#[command]
+fn listar_playlists() -> Vec<Playlist> {
+	let path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("src-tauri/src/playlist.json");
+	if let Ok(data) = std::fs::read_to_string(&path) {
+		serde_json::from_str(&data).unwrap_or_default()
+	} else {
+		Vec::new()
+	}
+}
+
+#[allow(dead_code)]
+#[command]
+fn salvar_playlist(title: String) -> Result<(), String> {
+	let path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join("src-tauri/src/playlist.json");
+	let mut playlists: Vec<Playlist> = if let Ok(data) = std::fs::read_to_string(&path) {
+		serde_json::from_str(&data).unwrap_or_default()
+	} else {
+		Vec::new()
+	};
+	if !playlists.iter().any(|pl| pl.title == title) {
+		playlists.push(Playlist { title, downloaded: false });
+	}
+	let json = serde_json::to_string_pretty(&playlists).map_err(|e| e.to_string())?;
+	std::fs::write(&path, json).map_err(|e| e.to_string())?;
+	Ok(())
+}
 use tauri::command;
 use tauri::Manager;
 use tauri::Emitter;
@@ -193,7 +298,7 @@ fn main() {
 			}
 			Ok(())
 		})
-		.invoke_handler(tauri::generate_handler![baixar_video_tauri, listar_videos_baixados])
+		.invoke_handler(tauri::generate_handler![baixar_video_tauri, listar_videos_baixados, cadastrar_usuario, autenticar_usuario])
 		.run(tauri::generate_context!())
 		.expect("error while running tauri application");
 }

@@ -9,7 +9,7 @@ interface VideoListProps {
 }
 
 const VideoList: React.FC<VideoListProps> = ({ videos, onOpenFolder, onShowDetails }) => (
-  <div className="video-list">
+  <div>
     {videos.map(video => (
       <VideoListItem
         key={video.path}

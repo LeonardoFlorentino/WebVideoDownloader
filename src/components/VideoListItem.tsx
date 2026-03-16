@@ -8,7 +8,7 @@ interface VideoListItemProps {
 }
 
 const VideoListItem: React.FC<VideoListItemProps> = ({ video, onOpenFolder, onShowDetails }) => (
-  <div className="video-list-item">
+  <div>
     <img
       src={video.thumbnail || '/default-thumb.png'}
       alt={video.name}
@@ -17,7 +17,7 @@ const VideoListItem: React.FC<VideoListItemProps> = ({ video, onOpenFolder, onSh
       height={54}
       style={{ borderRadius: 8, objectFit: 'cover', marginRight: 16 }}
     />
-    <div className="video-info">
+    <div>
       <div className="video-title">{video.name}</div>
       <div className="video-status">{video.status}</div>
       <div className="video-actions">
