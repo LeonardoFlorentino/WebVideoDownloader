@@ -10,20 +10,22 @@ export const TopBar = styled.div`
 `;
 
 export const NavButton = styled.button`
-  background: #363759;
-  color: #b3b3ff;
+  background: #6c63ff;
+  color: #fff;
   font-weight: 700;
   font-size: 1rem;
-  padding: 8px 20px;
+  padding: 8px 24px;
   border-radius: 10px;
   border: none;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
   margin-left: 12px;
   margin-right: 0;
+  box-shadow: 0 2px 8px #6c63ff33;
   &:hover {
-    background: #6c63ff;
+    background: #4b47c4;
     color: #fff;
+    box-shadow: 0 4px 16px #6c63ff55;
   }
 `;
 import styled from 'styled-components';

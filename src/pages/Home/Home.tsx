@@ -87,7 +87,7 @@ export default function Home() {
   };
 
   const handleGoToPanel = () => {
-    navigate('/user-panel');
+    navigate('/user');
   };
 
   return (

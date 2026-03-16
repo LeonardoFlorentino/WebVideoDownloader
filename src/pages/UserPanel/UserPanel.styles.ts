@@ -54,6 +54,25 @@ export const Button = styled.button`
     background: #e53e3e;
   }
 `;
+export const NavButton = styled.button`
+  background: #6c63ff;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 8px 24px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  margin-left: 12px;
+  margin-right: 0;
+  box-shadow: 0 2px 8px #6c63ff33;
+  &:hover {
+    background: #4b47c4;
+    color: #fff;
+    box-shadow: 0 4px 16px #6c63ff55;
+  }
+`;
 export const Section = styled.section`
   margin-top: 12px;
 `;

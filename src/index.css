@@ -1,3 +1,12 @@
+html, body {
+  min-height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #18192a 0%, #23243a 60%, #23243a 100%);
+  overflow-x: hidden;
+}
 :root {
   --text: #6b6375;
   --text-h: #08060d;
