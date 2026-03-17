@@ -20,15 +20,7 @@ import {
   DownloadAllButton
 } from './Home.styles';
 
-// Exemplo de tipo de vídeo/arquivo
-type Download = {
-  id: string;
-  url: string;
-  fileName: string;
-  ext: string;
-  progress: number; // 0-100
-  status: 'pendente' | 'baixando' | 'concluído' | 'erro';
-};
+import type { Download } from '@/types/download';
 
 
 import { useNavigate } from 'react-router-dom';

@@ -1,5 +1,5 @@
 import React from 'react';
-import type{ VideoInfo } from '../types/video';
+import type { VideoInfo } from '@/types/video';
 import VideoListItem from './VideoListItem';
 
 interface VideoListProps {

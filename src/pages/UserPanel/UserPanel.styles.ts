@@ -25,7 +25,6 @@ export const Header = styled.header`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
 `;
 export const IconCircle = styled.div`
   background: linear-gradient(135deg, #6c63ff 60%, #a463ff 100%);

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Download } from '../types/download';
+import type { Download } from '@/types/download';
 
 interface DownloadListProps {
   downloads: Download[];

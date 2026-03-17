@@ -1,11 +1,11 @@
 import React from 'react';
-import type { VideoInfo } from '../types/video';
+import type { VideoInfo } from '@/types/video';
 
-interface VideoListItemProps {
+type VideoListItemProps = {
   video: VideoInfo;
   onOpenFolder: (video: VideoInfo) => void;
   onShowDetails: (video: VideoInfo) => void;
-}
+};
 
 const VideoListItem: React.FC<VideoListItemProps> = ({ video, onOpenFolder, onShowDetails }) => (
   <div>

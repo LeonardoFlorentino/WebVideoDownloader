@@ -5,10 +5,7 @@ import Home from '../pages/Home/Home';
 import UserPanel from '../pages/UserPanel/UserPanel';
 import PlaylistPanel from '../pages/PlaylistPanel/PlaylistPanel';
 
-interface User {
-  username: string;
-  links: Array<{ title: string; url: string; downloaded: boolean }>;
-}
+import type { User } from '@/types/user';
 
 export default function RouterSetup({ user, setUser }: { user: User | null, setUser: (u: User | null) => void }) {
   return (

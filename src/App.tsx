@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import RouterSetup from './lib/routerSetup';
 
-interface User {
-  username: string;
-  links: Array<{ title: string; url: string; downloaded: boolean }>;
-}
+import type { User } from '@/types/user';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
