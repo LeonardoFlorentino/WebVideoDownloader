@@ -17,7 +17,7 @@ const EyeIcon = ({ open }: { open: boolean }) => (
   </svg>
 );
 import { useNavigate } from 'react-router-dom';
-import { Container, Card, IconCircle, Title, Subtitle, Form, Input, Button, ButtonAlt, ErrorMsg } from './LoginScreen.styles';
+import { Container, Card, IconCircle, Title, Subtitle, Form, Input, Button, ButtonAlt, ErrorMsg, TitleWrapper, PasswordFieldWrapper, ShowPasswordButton, RememberLabel, RememberCheckbox } from './LoginScreen.styles';
 import { invoke } from '@tauri-apps/api/core';
 
 
@@ -77,13 +77,13 @@ export default function LoginScreen({ onLogin }: { onLogin: (token: string) => v
   return (
     <Container>
       <Card>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <TitleWrapper>
           <IconCircle>
             <svg xmlns='http://www.w3.org/2000/svg' className='h-10 w-10' fill='none' viewBox='0 0 24 24' stroke='white'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M16 21v-2a4 4 0 00-8 0v2M12 11a4 4 0 100-8 4 4 0 000 8z' /></svg>
           </IconCircle>
           <Title>Login</Title>
           <Subtitle>Acesse sua conta para continuar</Subtitle>
-        </div>
+        </TitleWrapper>
         <Form onSubmit={handleLogin}>
           <Input
             type="text"
@@ -93,7 +93,7 @@ export default function LoginScreen({ onLogin }: { onLogin: (token: string) => v
             required
             autoFocus
           />
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <PasswordFieldWrapper>
             <Input
               type={showPassword ? 'text' : 'password'}
               placeholder="Senha"
@@ -102,34 +102,22 @@ export default function LoginScreen({ onLogin }: { onLogin: (token: string) => v
               required
               style={{ paddingRight: 38 }}
             />
-            <button
+            <ShowPasswordButton
               type="button"
               aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
               onClick={() => setShowPassword(v => !v)}
-              style={{
-                position: 'absolute',
-                right: 8,
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                height: '100%'
-              }}
             >
               <EyeIcon open={showPassword} />
-            </button>
-          </div>
-          <label style={{ color: '#b3b3ff', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <input
+            </ShowPasswordButton>
+          </PasswordFieldWrapper>
+          <RememberLabel>
+            <RememberCheckbox
               type="checkbox"
               checked={remember}
               onChange={e => setRemember(e.target.checked)}
-              style={{ marginRight: 8 }}
             />
             Salvar senha
-          </label>
+          </RememberLabel>
           <Button type="submit" disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar'}
           </Button>

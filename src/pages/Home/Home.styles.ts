@@ -1,3 +1,32 @@
+export const EmptyMessage = styled.div`
+  color: #b3b3ff;
+  text-align: center;
+  margin-top: 32px;
+`;
+
+export const UrlText = styled.div`
+  color: #6c63ff;
+  font-size: 13px;
+  word-break: break-all;
+`;
+
+export const DownloadButton = styled.button<{ disabled?: boolean }>`
+  background: #6c63ff;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
+  margin-right: 8px;
+  transition: background 0.2s;
+  &:hover {
+    background: #4b47c4;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
 export const TopBar = styled.div`
   width: 100%;
   max-width: 100vw;
@@ -91,21 +120,25 @@ export const AddButton = styled.button`
   }
 `;
 export const DownloadAllButton = styled.button`
+  display: block;
+  margin: 16px auto 12px auto;
   background: #43b581;
   color: #fff;
-  font-weight: 700;
-  font-size: 1.1rem;
-  padding: 0 24px;
-  border-radius: 12px;
+  font-weight: 800;
+  font-size: 1.15rem;
+  padding: 12px 36px;
+  border-radius: 24px;
   border: none;
   cursor: pointer;
-  margin-bottom: 8px;
-  margin-top: 8px;
-  width: 100%;
-  max-width: 600px;
-  transition: background 0.2s;
+  box-shadow: 0 2px 8px #43b58133;
+  letter-spacing: 0.5px;
+  transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
+  width: auto;
+  min-width: 180px;
+  text-align: center;
   &:hover {
     background: #2e8c5a;
+    box-shadow: 0 4px 16px #43b58155;
   }
   &:disabled {
     opacity: 0.6;

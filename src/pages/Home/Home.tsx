@@ -17,7 +17,10 @@ import {
   ProgressFill,
   Status,
   DownloadActions,
-  DownloadAllButton
+  DownloadAllButton,
+  EmptyMessage,
+  UrlText,
+  DownloadButton
 } from './Home.styles';
 
 import type { Download } from '@/types/download';
@@ -37,12 +40,13 @@ export default function Home() {
     if (!url.trim()) return;
     setDownloads(prev => [
       {
-        id: Date.now().toString(),
+        id: Date.now(),
         url,
-        fileName: `video_${prev.length + 1}`,
+        filename: `video_${prev.length + 1}`,
         ext: 'mp4',
         progress: 0,
         status: 'pendente',
+        canceled: false,
       },
       ...prev
     ]);
@@ -55,19 +59,19 @@ export default function Home() {
     setTimeout(() => {
       setDownloads(ds => ds.map(d =>
         d.status === 'baixando'
-          ? { ...d, status: 'concluído', progress: 100, baixada: true }
+          ? { ...d, status: 'concluído', progress: 100 }
           : d
       ));
       setDownloadingAll(false);
     }, 2000);
   };
 
-  const handleDownload = (id: string) => {
+  const handleDownload = (id: number) => {
     setDownloads(ds => ds.map(d => d.id === id ? { ...d, status: 'baixando', progress: 10 } : d));
     setTimeout(() => {
       setDownloads(ds => ds.map(d =>
         d.id === id
-          ? { ...d, status: 'concluído', progress: 100, baixada: true }
+          ? { ...d, status: 'concluído', progress: 100 }
           : d
       ));
     }, 2000);
@@ -106,15 +110,15 @@ export default function Home() {
         Baixar Todos
       </DownloadAllButton>
       <DownloadList>
-        {downloads.length === 0 && <div style={{ color: '#b3b3ff', textAlign: 'center', marginTop: 32 }}>Nenhum vídeo adicionado ainda.</div>}
+        {downloads.length === 0 && <EmptyMessage>Nenhum vídeo adicionado ainda.</EmptyMessage>}
         {downloads.map(d => (
           <DownloadItem key={d.id}>
             <FileInfo>
-              <FileName>{d.fileName}</FileName>
+              <FileName>{d.filename}</FileName>
               <FileExt>{d.ext}</FileExt>
             </FileInfo>
             <div style={{ flex: 2, minWidth: 0 }}>
-              <div style={{ color: '#6c63ff', fontSize: 13, wordBreak: 'break-all' }}>{d.url}</div>
+              <UrlText>{d.url}</UrlText>
               <ProgressBar>
                 <ProgressTrack>
                   <ProgressFill style={{ width: `${d.progress}%` }} status={d.status} />
@@ -123,13 +127,12 @@ export default function Home() {
             </div>
             <Status status={d.status}>{d.status === 'concluído' ? 'Concluído' : d.status === 'baixando' ? 'Baixando...' : d.status === 'erro' ? 'Erro' : 'Pendente'}</Status>
             <DownloadActions>
-              <button
+              <DownloadButton
                 onClick={() => handleDownload(d.id)}
                 disabled={d.status === 'concluído' || d.status === 'baixando'}
-                style={{ background: '#6c63ff', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: d.status === 'concluído' || d.status === 'baixando' ? 'not-allowed' : 'pointer', marginRight: 8 }}
               >
                 Baixar
-              </button>
+              </DownloadButton>
             </DownloadActions>
           </DownloadItem>
         ))}

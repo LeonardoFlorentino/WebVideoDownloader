@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Card, IconCircle, Title, Subtitle, Form, Input, Button, ButtonAlt, ErrorMsg, SuccessMsg } from './RegisterScreen.styles';
+import { Container, Card, IconCircle, Title, Subtitle, Form, Input, Button, ButtonAlt, ErrorMsg, SuccessMsg, TitleWrapper } from './RegisterScreen.styles';
 import { invoke } from '@tauri-apps/api/core';
 
 
@@ -39,13 +39,13 @@ export default function RegisterScreen({ onRegister }: { onRegister: () => void 
   return (
     <Container>
       <Card>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <TitleWrapper>
           <IconCircle>
             <svg xmlns='http://www.w3.org/2000/svg' className='h-10 w-10' fill='none' viewBox='0 0 24 24' stroke='white'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M16 21v-2a4 4 0 00-8 0v2M12 11a4 4 0 100-8 4 4 0 000 8z' /></svg>
           </IconCircle>
           <Title>Cadastro</Title>
           <Subtitle>Crie sua conta para acessar</Subtitle>
-        </div>
+        </TitleWrapper>
         <Form onSubmit={handleRegister}>
           <Input
             type="text"

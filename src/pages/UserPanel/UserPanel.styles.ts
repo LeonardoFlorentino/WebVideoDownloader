@@ -63,7 +63,7 @@ export const PlaylistCard = styled.div`
   box-shadow: 0 2px 12px #0002;
   padding: 24px;
   width: 100%;
-  max-width: 380px;
+  max-width: 900px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -133,14 +133,26 @@ export const CreateButton = styled.button`
 `;
 
 export const SubmitButton = styled.button`
-  background: #6c63ff;
+  background: linear-gradient(90deg, #6c63ff 60%, #a463ff 100%);
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  padding: 14px 0;
+  min-width: 160px;
   flex: 1;
-  font-size: 17px;
+  box-shadow: 0 2px 8px #6c63ff33;
   cursor: pointer;
-  font-weight: 700;
+  transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
+  &:hover {
+    background: linear-gradient(90deg, #5a54e6 60%, #8a54e6 100%);
+    box-shadow: 0 4px 16px #6c63ff55;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 export const NoLinkItem = styled.li`
@@ -151,11 +163,23 @@ export const CancelButton = styled.button`
   background: #363759;
   color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 17px;
-  padding: 6px 18px;
+  border-radius: 12px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  padding: 14px 0;
+  min-width: 160px;
+  flex: 1;
+  box-shadow: 0 2px 8px #23243a33;
   cursor: pointer;
-  font-weight: 700;
+  transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
+  &:hover {
+    background: #23243a;
+    box-shadow: 0 4px 16px #23243a55;
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 export const Card = styled.div`
@@ -231,13 +255,13 @@ export const ModalOverlay = styled.div`
 export const ModalForm = styled.form`
   background: #23234a;
   border-radius: 16px;
-  padding: 32px;
-  min-width: 340px;
-  max-width: 420px;
+  padding: 40px 36px 32px 36px;
+  min-width: 480px;
+  max-width: 700px;
   box-shadow: 0 4px 32px #0008;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 22px;
 `;
 
 export const ModalTitle = styled.div`

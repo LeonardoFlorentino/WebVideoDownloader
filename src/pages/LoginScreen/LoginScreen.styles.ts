@@ -1,3 +1,39 @@
+export const TitleWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+`;
+
+export const PasswordFieldWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+`;
+
+export const ShowPasswordButton = styled.button`
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  height: 100%;
+`;
+
+export const RememberLabel = styled.label`
+  color: #b3b3ff;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+`;
+
+export const RememberCheckbox = styled.input`
+  margin-right: 8px;
+`;
 import styled from 'styled-components';
 
 export const Container = styled.div`
