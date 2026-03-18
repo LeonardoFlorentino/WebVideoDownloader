@@ -6,13 +6,16 @@ export const TitleWrapper = styled.div`
 
 export const PasswordFieldWrapper = styled.div`
   position: relative;
+  width: 100%;
   display: flex;
   align-items: center;
 `;
 
 export const ShowPasswordButton = styled.button`
   position: absolute;
-  right: 8px;
+  right: 12px;
+  top: 0;
+  bottom: 0;
   background: none;
   border: none;
   padding: 0;
@@ -34,7 +37,7 @@ export const RememberLabel = styled.label`
 export const RememberCheckbox = styled.input`
   margin-right: 8px;
 `;
-import styled from 'styled-components';
+import styled from "styled-components";
 
 export const Container = styled.div`
   min-height: 100vh;
@@ -47,7 +50,7 @@ export const Card = styled.div`
   width: 100%;
   max-width: 420px;
   min-width: 320px;
-  background: rgba(35,36,58,0.95);
+  background: rgba(35, 36, 58, 0.95);
   box-shadow: 0 8px 32px #0004;
   border-radius: 24px;
   padding: 40px 32px;
@@ -85,7 +88,9 @@ export const Form = styled.form`
   gap: 18px;
 `;
 export const Input = styled.input`
-  padding: 14px 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 44px 14px 16px;
   border-radius: 12px;
   border: 1px solid #363759;
   background: #23243a;
@@ -109,7 +114,9 @@ export const Button = styled.button`
   box-shadow: 0 2px 8px #6c63ff33;
   cursor: pointer;
   margin-top: 4px;
-  transition: background 0.2s, opacity 0.2s;
+  transition:
+    background 0.2s,
+    opacity 0.2s;
   &:hover {
     background: linear-gradient(90deg, #5a54e6 60%, #8a54e6 100%);
   }
