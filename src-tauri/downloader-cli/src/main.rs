@@ -13,20 +13,24 @@ struct Args {
     /// Nome do arquivo de saída (opcional)
     #[arg(short, long)]
     output: Option<String>,
+    /// Nome da playlist (opcional)
+    #[arg(long)]
+    playlist: Option<String>,
 }
 
 fn main() {
     let args = Args::parse();
     let url = &args.url;
     let output = args.output.as_deref().unwrap_or("video.mp4");
+    let playlist = args.playlist.as_deref();
     let res = if url.ends_with(".m3u8") || url.contains(".m3u8?") {
-        hls::baixar_hls(url, output)
+        hls::baixar_hls(url, output, playlist)
     } else if url.contains("player.jmvstream.com") {
-        baixar_player_jmvstream(url, output)
+        baixar_player_jmvstream(url, output, playlist)
     } else {
-        baixar_video(url, Some(output))
+        baixar_video(url, Some(output), playlist)
     };
-    fn baixar_player_jmvstream(player_url: &str, output: &str) -> Result<(), String> {
+    fn baixar_player_jmvstream(player_url: &str, output: &str, playlist: Option<&str>) -> Result<(), String> {
         println!("[EXTRAÇÃO] Baixando HTML do player: {}", player_url);
         let client = reqwest::blocking::Client::builder()
             .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
@@ -48,7 +52,7 @@ fn main() {
             None => return Err("Não foi possível extrair o link .m3u8 do player".to_string()),
         };
         println!("[EXTRAÇÃO] Link .m3u8 extraído: {}", m3u8_url);
-        hls::baixar_hls(m3u8_url, output)
+        hls::baixar_hls(m3u8_url, output, playlist)
     }
     if let Err(e) = res {
         eprintln!("Erro: {}", e);
@@ -56,7 +60,7 @@ fn main() {
     }
 }
 
-fn baixar_video(url: &str, filename: Option<&str>) -> Result<(), String> {
+fn baixar_video(url: &str, filename: Option<&str>, playlist_name: Option<&str>) -> Result<(), String> {
     println!("[CLI] Iniciando download: {}", url);
     let response = reqwest::blocking::get(url).map_err(|e| format!("Erro ao baixar: {}", e))?;
     if !response.status().is_success() {
@@ -66,6 +70,9 @@ fn baixar_video(url: &str, filename: Option<&str>) -> Result<(), String> {
     let ext = filename.unwrap_or("video.mp4");
     let mut path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     path.push("Vídeos baixados");
+    if let Some(playlist) = playlist_name {
+        path.push(playlist);
+    }
     std::fs::create_dir_all(&path).map_err(|e| format!("Erro ao criar pasta: {}", e))?;
     path.push(ext);
     let mut file = File::create(&path).map_err(|e| format!("Erro ao criar arquivo: {}", e))?;

@@ -11,10 +11,10 @@ export default function RouterSetup({ user, setUser }: { user: User | null, setU
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginScreen onLogin={(username) => setUser({ username, links: [] })} />} />
+        <Route path="/login" element={<LoginScreen onLogin={(username) => setUser({ username })} />} />
         <Route path="/register" element={<RegisterScreen onRegister={() => {}} />} />
-        <Route path="/" element={user ? <Home links={user.links} onDownloadAll={() => {}} /> : <Navigate to="/login" />} />
-        <Route path="/user" element={user ? <UserPanel username={user.username} /> : <Navigate to="/login" />} />
+        <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
+        <Route path="/user" element={user ? <UserPanel /> : <Navigate to="/login" />} />
         <Route path="/playlists" element={user ? <PlaylistPanel playlists={[]} onDownload={() => {}} /> : <Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>

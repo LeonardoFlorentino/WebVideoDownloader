@@ -94,15 +94,38 @@ export const PlaylistLinksList = styled.ul`
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
 `;
 
 export const PlaylistLinkItem = styled.li`
   background: #363759;
   color: #fff;
   border-radius: 8px;
-  padding: 6px 10px;
+  padding: 6px 10px 6px 0;
   margin-bottom: 6px;
   word-break: break-all;
+  display: flex;
+  align-items: center;
+  font-size: 1.05rem;
+  width: 100%;
+`;
+
+export const PlaylistLinkIndex = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(90deg, #6c63ff 60%, #a463ff 100%);
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  margin-right: 14px;
+  box-shadow: 0 2px 8px #6c63ff22;
 `;
 
 export const NoPlaylists = styled.div`

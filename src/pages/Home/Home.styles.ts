@@ -1,3 +1,49 @@
+export const ButtonRow = styled.div`
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto 0 auto;
+  @media (max-width: 700px) {
+    flex-direction: column;
+    gap: 12px;
+  }
+`;
+export const FileNameInput = styled.input`
+  width: 100%;
+  min-width: 400px;
+  max-width: 900px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1.5px solid #363759;
+  background: #23284d;
+  color: #fff;
+  font-size: 1.15rem;
+  outline: none;
+  margin-bottom: 0;
+  &:focus {
+    border-color: #6c63ff;
+  }
+`;
+export const TrashButton = styled.button`
+  background: transparent;
+  color: #ff5e5e;
+  border: none;
+  font-size: 1.5rem;
+  margin-left: 8px;
+  cursor: pointer;
+  transition: color 0.2s;
+  &:hover {
+    color: #ff2222;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
 export const EmptyMessage = styled.div`
   color: #b3b3ff;
   text-align: center;
@@ -16,7 +62,7 @@ export const DownloadButton = styled.button<{ disabled?: boolean }>`
   border: none;
   border-radius: 8px;
   padding: 6px 14px;
-  cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
+  cursor: ${({ disabled }) => (disabled ? "not-allowed" : "pointer")};
   margin-right: 8px;
   transition: background 0.2s;
   &:hover {
@@ -47,7 +93,10 @@ export const NavButton = styled.button`
   border-radius: 10px;
   border: none;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  transition:
+    background 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
   margin-left: 12px;
   margin-right: 0;
   box-shadow: 0 2px 8px #6c63ff33;
@@ -57,7 +106,7 @@ export const NavButton = styled.button`
     box-shadow: 0 4px 16px #6c63ff55;
   }
 `;
-import styled from 'styled-components';
+import styled from "styled-components";
 
 export const Container = styled.div`
   min-height: 100vh;
@@ -82,20 +131,24 @@ export const Title = styled.h2`
 
 export const UrlForm = styled.form`
   display: flex;
-  gap: 12px;
-  margin-bottom: 8px;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 18px;
   width: 100%;
-  max-width: 600px;
+  max-width: 900px;
 `;
 export const UrlInput = styled.input`
-  flex: 1;
-  padding: 14px 16px;
+  width: 100%;
+  min-width: 400px;
+  max-width: 900px;
+  padding: 18px 20px;
   border-radius: 12px;
   border: 1.5px solid #363759;
   background: #23243a;
   color: #fff;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   outline: none;
+  margin-bottom: 0;
   transition: border 0.2s;
   &:focus {
     border-color: #6c63ff;
@@ -106,11 +159,17 @@ export const AddButton = styled.button`
   color: #fff;
   font-weight: 700;
   font-size: 1.1rem;
-  padding: 0 24px;
+  padding: 0 32px;
   border-radius: 12px;
   border: none;
   cursor: pointer;
   transition: background 0.2s;
+  height: 52px;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   &:hover {
     background: #4b47c4;
   }
@@ -120,22 +179,27 @@ export const AddButton = styled.button`
   }
 `;
 export const DownloadAllButton = styled.button`
-  display: block;
-  margin: 16px auto 12px auto;
   background: #43b581;
   color: #fff;
   font-weight: 800;
-  font-size: 1.15rem;
-  padding: 12px 36px;
-  border-radius: 24px;
+  font-size: 1.1rem;
+  padding: 0 32px;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
   box-shadow: 0 2px 8px #43b58133;
   letter-spacing: 0.5px;
-  transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
-  width: auto;
-  min-width: 180px;
-  text-align: center;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
+  height: 52px;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  margin: 0;
   &:hover {
     background: #2e8c5a;
     box-shadow: 0 4px 16px #43b58155;
@@ -152,7 +216,7 @@ export const DownloadList = styled.ul`
   gap: 18px;
   margin-top: 12px;
   width: 100%;
-  max-width: 600px;
+  max-width: 900px;
 `;
 export const DownloadItem = styled.li`
   display: flex;
@@ -163,6 +227,8 @@ export const DownloadItem = styled.li`
   border-radius: 12px;
   padding: 16px 18px;
   box-shadow: 0 2px 8px #6c63ff11;
+  max-width: 900px;
+  width: 100%;
 `;
 export const FileInfo = styled.div`
   display: flex;
@@ -194,9 +260,13 @@ export const ProgressTrack = styled.div`
 export const ProgressFill = styled.div<{ status: string }>`
   height: 100%;
   background: ${({ status }) =>
-    status === 'concluído' ? '#43b581' :
-    status === 'baixando' ? '#6c63ff' :
-    status === 'erro' ? '#ff5e5e' : '#b3b3ff'};
+    status === "concluído"
+      ? "#43b581"
+      : status === "baixando"
+        ? "#6c63ff"
+        : status === "erro"
+          ? "#ff5e5e"
+          : "#b3b3ff"};
   border-radius: 8px;
   transition: width 0.5s;
 `;
@@ -205,9 +275,13 @@ export const Status = styled.div<{ status: string }>`
   text-align: center;
   font-weight: 700;
   color: ${({ status }) =>
-    status === 'concluído' ? '#43b581' :
-    status === 'baixando' ? '#6c63ff' :
-    status === 'erro' ? '#ff5e5e' : '#b3b3ff'};
+    status === "concluído"
+      ? "#43b581"
+      : status === "baixando"
+        ? "#6c63ff"
+        : status === "erro"
+          ? "#ff5e5e"
+          : "#b3b3ff"};
 `;
 export const DownloadActions = styled.div`
   display: flex;
@@ -267,7 +341,7 @@ export const VideoUrl = styled.div`
 `;
 // Removido: Status antigo para evitar conflito de nome
 export const StatusOld = styled.span<{ downloaded: boolean }>`
-  color: ${props => props.downloaded ? '#43b581' : '#b3b3ff'};
+  color: ${(props) => (props.downloaded ? "#43b581" : "#b3b3ff")};
   font-weight: 500;
   margin-top: 8px;
   @media (min-width: 768px) {

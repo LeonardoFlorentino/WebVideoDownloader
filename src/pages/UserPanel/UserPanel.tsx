@@ -1,23 +1,52 @@
-
-import React from 'react';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { useNavigate } from 'react-router-dom';
+import React from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { useNavigate } from "react-router-dom";
 import {
-  Container, Card, Header, IconCircle, Username,
-  TopBarFixed, WelcomeWrapper, CreatePlaylistWrapper, PlaylistsWrapper, PlaylistCard, PlaylistCardTitle, PlaylistLinksLabel, PlaylistLinksList, PlaylistLinkItem, NoPlaylists,
-  ModalOverlay, ModalForm, ModalTitle, ModalInput, ModalLinksLabel, ModalLinkFieldWrapper, ModalLinkInput, ModalButton, ModalButtonAdd, ModalActions,
-  WelcomeHeaderRow, PlaylistCardHeader, EditButton, CreateButton, SubmitButton, NoLinkItem, CancelButton
-} from './UserPanel.styles';
-import { NavButton } from '../Home/Home.styles';
-import type { Playlist } from '@/types/playlist';
+  Container,
+  Card,
+  Header,
+  IconCircle,
+  Username,
+  TopBarFixed,
+  WelcomeWrapper,
+  CreatePlaylistWrapper,
+  PlaylistsWrapper,
+  PlaylistCard,
+  PlaylistCardTitle,
+  PlaylistLinksLabel,
+  PlaylistLinksList,
+  PlaylistLinkItem,
+  PlaylistLinkIndex,
+  NoPlaylists,
+  ModalOverlay,
+  ModalForm,
+  ModalTitle,
+  ModalInput,
+  ModalLinksLabel,
+  ModalLinkFieldWrapper,
+  ModalLinkInput,
+  ModalButton,
+  ModalButtonAdd,
+  ModalActions,
+  WelcomeHeaderRow,
+  PlaylistCardHeader,
+  EditButton,
+  CreateButton,
+  SubmitButton,
+  NoLinkItem,
+  CancelButton,
+} from "./UserPanel.styles";
+import { NavButton } from "../Home/Home.styles";
+import type { Playlist } from "@/types/playlist";
+import { openDownloadFolder } from "../../service/openFolder";
 
-interface UserPanelProps {
-  username: string;
-}
+import { useDownloads } from "../../context/useDownloads";
 
-const UserPanel: React.FC<UserPanelProps> = ({ username }) => {
+const UserPanel: React.FC = () => {
   const navigate = useNavigate();
+  const { username } = useDownloads();
   // Persistência por usuário (username) no localStorage
   const [playlists, setPlaylists] = React.useState<Playlist[]>(() => {
     try {
@@ -27,23 +56,78 @@ const UserPanel: React.FC<UserPanelProps> = ({ username }) => {
       return [];
     }
   });
+
+  // Sempre que username mudar, recarregar playlists do localStorage
+  React.useEffect(() => {
+    try {
+      const data = localStorage.getItem(`playlists_${username}`);
+      setPlaylists(data ? JSON.parse(data) : []);
+    } catch {
+      setPlaylists([]);
+    }
+  }, [username]);
   const [showModal, setShowModal] = React.useState<boolean>(false);
-  const [modalTitle, setModalTitle] = React.useState<string>('');
-  const [modalLinks, setModalLinks] = React.useState<string[]>(['']);
+  const [modalTitle, setModalTitle] = React.useState<string>("");
+  const [modalLinks, setModalLinks] = React.useState<string[]>([""]);
   const [editId, setEditId] = React.useState<string | null>(null);
-  // Removido showToast, usaremos react-toastify
+  // Estado para download em cascata
+  const [cascadeStatus, setCascadeStatus] = React.useState<{
+    [playlistId: string]: { index: number; downloading: boolean };
+  }>({});
+
+  // Função para simular download sequencial
+  const handleCascadeDownload = async (
+    playlistId: string,
+    links: { id: string; url: string }[],
+    playlistName: string,
+  ) => {
+    setCascadeStatus((s) => ({
+      ...s,
+      [playlistId]: { index: 0, downloading: true },
+    }));
+    try {
+      await invoke("baixar_em_cascata", {
+        playlist: playlistName,
+        urls: links.map((l) => l.url),
+      });
+      setCascadeStatus((s) => ({
+        ...s,
+        [playlistId]: { index: links.length, downloading: false },
+      }));
+      toast.success("Download em cascata finalizado!", {
+        position: "top-center",
+        autoClose: 2000,
+        theme: "dark",
+      });
+    } catch (e) {
+      console.error("Erro ao baixar playlist:", e);
+      let msg = "";
+      if (typeof e === "string") {
+        msg = e;
+      } else if (e instanceof Error) {
+        msg = e.message;
+      } else {
+        msg = JSON.stringify(e);
+      }
+      toast.error(`Erro ao baixar playlist: ${msg}`);
+      setCascadeStatus((s) => ({
+        ...s,
+        [playlistId]: { index: 0, downloading: false },
+      }));
+    }
+  };
 
   const handleLogout = (): void => {
-    navigate('/login');
+    navigate("/login");
   };
   const handleGoHome = (): void => {
-    navigate('/');
+    navigate("/");
   };
 
   // Abrir modal para criar nova playlist
   const openCreateModal = (): void => {
-    setModalTitle('');
-    setModalLinks(['']);
+    setModalTitle("");
+    setModalLinks([""]);
     setEditId(null);
     setShowModal(true);
   };
@@ -51,48 +135,91 @@ const UserPanel: React.FC<UserPanelProps> = ({ username }) => {
   // Abrir modal para editar playlist existente
   const openEditModal = (playlist: Playlist): void => {
     setModalTitle(playlist.name);
-    setModalLinks(playlist.links.map(l => l.url).length ? playlist.links.map(l => l.url) : ['']);
+    setModalLinks(
+      playlist.links.map((l) => l.url).length
+        ? playlist.links.map((l) => l.url)
+        : [""],
+    );
     setEditId(playlist.id);
     setShowModal(true);
   };
 
   // Adiciona/remover campos de link na modal
-  const handleAddLinkField = (): void => setModalLinks(links => [...links, '']);
-  const handleRemoveLinkField = (idx: number): void => setModalLinks(links => links.length > 1 ? links.filter((_, i) => i !== idx) : links);
-  const handleChangeLinkField = (idx: number, value: string): void => setModalLinks(links => links.map((l, i) => i === idx ? value : l));
+  const handleAddLinkField = (): void =>
+    setModalLinks((links) => [...links, ""]);
+  const handleRemoveLinkField = (idx: number): void =>
+    setModalLinks((links) =>
+      links.length > 1 ? links.filter((_, i) => i !== idx) : links,
+    );
+  const handleChangeLinkField = (idx: number, value: string): void =>
+    setModalLinks((links) => links.map((l, i) => (i === idx ? value : l)));
 
   // Salvar playlist (criar ou editar)
   const handleSavePlaylist = (e: React.FormEvent<HTMLFormElement>): void => {
     e.preventDefault();
     const title = modalTitle.trim();
-    const urls = modalLinks.map(u => u.trim()).filter(Boolean);
+    const urls = modalLinks.map((u) => u.trim()).filter(Boolean);
     if (!title) return;
     let newPlaylists: Playlist[];
     if (editId) {
-      newPlaylists = playlists.map(pl => pl.id === editId ? { ...pl, name: title, links: urls.map(url => ({ id: Date.now().toString() + Math.random(), url })) } : pl);
+      newPlaylists = playlists.map((pl) =>
+        pl.id === editId
+          ? {
+              ...pl,
+              name: title,
+              links: urls.map((url) => ({
+                id: Date.now().toString() + Math.random(),
+                url,
+              })),
+            }
+          : pl,
+      );
     } else {
       newPlaylists = [
-        { id: Date.now().toString(), name: title, links: urls.map(url => ({ id: Date.now().toString() + Math.random(), url })) },
-        ...playlists
+        {
+          id: Date.now().toString(),
+          name: title,
+          links: urls.map((url) => ({
+            id: Date.now().toString() + Math.random(),
+            url,
+          })),
+        },
+        ...playlists,
       ];
     }
     setPlaylists(newPlaylists);
     localStorage.setItem(`playlists_${username}`, JSON.stringify(newPlaylists));
     setShowModal(false);
-    toast.success('Playlist salva com sucesso!', {
-      position: 'top-center',
+    toast.success("Playlist salva com sucesso!", {
+      position: "top-center",
       autoClose: 2000,
       hideProgressBar: true,
       closeOnClick: true,
       pauseOnHover: false,
       draggable: false,
-      theme: 'dark',
+      theme: "dark",
     });
   };
   // Atualizar localStorage sempre que playlists mudar (caso haja outras edições futuras)
   React.useEffect(() => {
     localStorage.setItem(`playlists_${username}`, JSON.stringify(playlists));
   }, [playlists, username]);
+
+  const handleOpenFolder = (playlistName: string) => {
+    openDownloadFolder(playlistName)
+      .then(() => {
+        toast.info("Pasta aberta!", {
+          position: "top-center",
+          autoClose: 1500,
+          theme: "dark",
+        });
+      })
+      .catch((e) => {
+        toast.error(
+          `Erro ao abrir pasta: ${e && e.toString ? e.toString() : JSON.stringify(e)}`,
+        );
+      });
+  };
 
   return (
     <Container>
@@ -105,7 +232,20 @@ const UserPanel: React.FC<UserPanelProps> = ({ username }) => {
           <Header>
             <WelcomeHeaderRow>
               <IconCircle>
-                <svg xmlns='http://www.w3.org/2000/svg' className='h-6 w-6' fill='none' viewBox='0 0 24 24' stroke='white'><path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M16 21v-2a4 4 0 00-8 0v2M12 11a4 4 0 100-8 4 4 0 000 8z' /></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="white"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 21v-2a4 4 0 00-8 0v2M12 11a4 4 0 100-8 4 4 0 000 8z"
+                  />
+                </svg>
               </IconCircle>
               <Username>Bem-vindo, {username}</Username>
             </WelcomeHeaderRow>
@@ -116,33 +256,88 @@ const UserPanel: React.FC<UserPanelProps> = ({ username }) => {
         <CreateButton onClick={openCreateModal}>Criar Playlist</CreateButton>
       </CreatePlaylistWrapper>
       <PlaylistsWrapper>
-        {playlists.length === 0 && <NoPlaylists>Nenhuma playlist criada ainda.</NoPlaylists>}
-        {playlists.map(pl => (
-          <PlaylistCard key={pl.id}>
-            <PlaylistCardHeader>
-              <PlaylistCardTitle>{pl.name}</PlaylistCardTitle>
-              <EditButton onClick={() => openEditModal(pl)}>Editar</EditButton>
-            </PlaylistCardHeader>
-            <PlaylistLinksLabel>Links:</PlaylistLinksLabel>
-            <PlaylistLinksList>
-              {pl.links.length === 0 && <NoLinkItem>Nenhum link</NoLinkItem>}
-              {pl.links.map(link => (
-                <PlaylistLinkItem key={link.id}>{link.url}</PlaylistLinkItem>
-              ))}
-            </PlaylistLinksList>
-          </PlaylistCard>
-        ))}
+        {playlists.length === 0 && (
+          <NoPlaylists>Nenhuma playlist criada ainda.</NoPlaylists>
+        )}
+        {playlists.map((pl) => {
+          const cascade = cascadeStatus[pl.id];
+          return (
+            <PlaylistCard key={pl.id}>
+              <PlaylistCardHeader>
+                <PlaylistCardTitle>{pl.name}</PlaylistCardTitle>
+                <EditButton onClick={() => openEditModal(pl)}>
+                  Editar
+                </EditButton>
+              </PlaylistCardHeader>
+              <PlaylistLinksLabel>Links:</PlaylistLinksLabel>
+              <PlaylistLinksList>
+                {pl.links.length === 0 && <NoLinkItem>Nenhum link</NoLinkItem>}
+                {pl.links.map((link, idx) => (
+                  <PlaylistLinkItem
+                    key={link.id}
+                    style={
+                      cascade && cascade.downloading && cascade.index === idx
+                        ? { background: "#6c63ff", color: "#fff" }
+                        : {}
+                    }
+                  >
+                    <PlaylistLinkIndex>{idx + 1}</PlaylistLinkIndex>
+                    <span style={{ textAlign: "left" }}>{link.url}</span>
+                    {cascade &&
+                      cascade.downloading &&
+                      cascade.index === idx && (
+                        <span style={{ marginLeft: 8, fontWeight: 600 }}>
+                          (baixando...)
+                        </span>
+                      )}
+                  </PlaylistLinkItem>
+                ))}
+              </PlaylistLinksList>
+              <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+                <EditButton
+                  onClick={() =>
+                    handleCascadeDownload(pl.id, pl.links, pl.name)
+                  }
+                  disabled={
+                    pl.links.length === 0 || (cascade && cascade.downloading)
+                  }
+                >
+                  Baixar em cascata
+                </EditButton>
+                <EditButton
+                  onClick={() => handleOpenFolder(pl.name)}
+                  style={{ background: "#2d2d2d", color: "#fff" }}
+                >
+                  Abrir pasta
+                </EditButton>
+                {cascade && cascade.downloading && (
+                  <span
+                    style={{
+                      color: "#b3b3ff",
+                      fontWeight: 600,
+                      alignSelf: "center",
+                    }}
+                  >
+                    Baixando vídeo {cascade.index + 1} de {pl.links.length}
+                  </span>
+                )}
+              </div>
+            </PlaylistCard>
+          );
+        })}
       </PlaylistsWrapper>
       <ToastContainer />
       {showModal && (
         <ModalOverlay>
           <ModalForm onSubmit={handleSavePlaylist}>
-            <ModalTitle>{editId ? 'Editar Playlist' : 'Nova Playlist'}</ModalTitle>
+            <ModalTitle>
+              {editId ? "Editar Playlist" : "Nova Playlist"}
+            </ModalTitle>
             <ModalInput
               type="text"
               placeholder="Título da playlist"
               value={modalTitle}
-              onChange={e => setModalTitle(e.target.value)}
+              onChange={(e) => setModalTitle(e.target.value)}
               required
             />
             <ModalLinksLabel>URLs dos vídeos</ModalLinksLabel>
@@ -152,26 +347,37 @@ const UserPanel: React.FC<UserPanelProps> = ({ username }) => {
                   type="text"
                   placeholder={`URL #${idx + 1}`}
                   value={url}
-                  onChange={e => handleChangeLinkField(idx, e.target.value)}
+                  onChange={(e) => handleChangeLinkField(idx, e.target.value)}
                   required={idx === 0}
                 />
                 {modalLinks.length > 1 && (
-                  <ModalButton type="button" onClick={() => handleRemoveLinkField(idx)}>-</ModalButton>
+                  <ModalButton
+                    type="button"
+                    onClick={() => handleRemoveLinkField(idx)}
+                  >
+                    -
+                  </ModalButton>
                 )}
                 {idx === modalLinks.length - 1 && (
-                  <ModalButtonAdd type="button" onClick={handleAddLinkField}>+</ModalButtonAdd>
+                  <ModalButtonAdd type="button" onClick={handleAddLinkField}>
+                    +
+                  </ModalButtonAdd>
                 )}
               </ModalLinkFieldWrapper>
             ))}
             <ModalActions>
-              <SubmitButton type="submit">{editId ? 'Salvar' : 'Criar'}</SubmitButton>
-              <CancelButton type="button" onClick={() => setShowModal(false)}>Cancelar</CancelButton>
+              <SubmitButton type="submit">
+                {editId ? "Salvar" : "Criar"}
+              </SubmitButton>
+              <CancelButton type="button" onClick={() => setShowModal(false)}>
+                Cancelar
+              </CancelButton>
             </ModalActions>
           </ModalForm>
         </ModalOverlay>
       )}
     </Container>
   );
-}
+};
 
 export default UserPanel;

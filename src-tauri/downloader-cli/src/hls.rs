@@ -3,7 +3,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use reqwest::blocking::Client;
 
-pub fn baixar_hls(m3u8_url: &str, filename: &str) -> Result<(), String> {
+pub fn baixar_hls(m3u8_url: &str, filename: &str, playlist_name: Option<&str>) -> Result<(), String> {
     println!("[HLS] Baixando playlist: {}", m3u8_url);
     let client = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
@@ -65,6 +65,9 @@ pub fn baixar_hls(m3u8_url: &str, filename: &str) -> Result<(), String> {
     }
     let mut path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     path.push("Vídeos baixados");
+    if let Some(playlist) = playlist_name {
+        path.push(playlist);
+    }
     std::fs::create_dir_all(&path).map_err(|e| format!("Erro ao criar pasta: {}", e))?;
     path.push(filename);
     if ts_urls.is_empty() {
