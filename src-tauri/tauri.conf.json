@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "ConvergenciaDownloader",
+        "title": "WebVideoDownloader",
         "width": 960,
         "height": 1080,
         "resizable": true,
