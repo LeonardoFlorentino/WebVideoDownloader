@@ -124,7 +124,7 @@ export const CardActions = styled.div`
 `;
 
 export const OpenFolderButton = styled.button`
-  background: #222b4a;
+  background: #6c63ff;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -135,6 +135,6 @@ export const OpenFolderButton = styled.button`
   transition: background 0.2s;
   outline: none;
   &:hover {
-    background: #2d3860;
+    background: #554fd1;
   }
 `;

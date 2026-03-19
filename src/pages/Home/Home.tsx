@@ -1,3 +1,4 @@
+
 import { openDownloadFolder } from "../../service/openFolder";
 import DownloadCard from "./DownloadCard/DownloadCard";
 import React, { useState } from "react";
@@ -18,18 +19,22 @@ import {
   ButtonRow,
 } from "./Home.styles";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useDownloads } from "../../context/useDownloads";
 import type { Download } from "@/types/download";
 import { useNavigate } from "react-router-dom";
 import {
-  baixarEmCascata,
-  addMainUrl,
   getMainUrls,
+  getTitleFromUrl,
+  updateMainUrlTitle,
 } from "../../service/downloadsService";
+import { baixarVideoTauri } from "../../service/baixarVideo";
+import { listen } from "@tauri-apps/api/event";
+import { listDownloadedVideos } from "../../lib/listVideos";
 
-function Home() {
-  const username = localStorage.getItem("lastUser") || "";
+type HomeProps = { username: string };
+function Home({ username }: HomeProps) {
+    console.log("[Home] username prop:", username);
   const [url, setUrl] = useState("");
   const { downloads, setDownloads } = useDownloads() as {
     downloads: Download[];
@@ -38,25 +43,54 @@ function Home() {
   const [filename, setFilename] = useState("");
   const [downloadingAll, setDownloadingAll] = useState(false);
   const navigate = useNavigate();
+  const downloadsRef = useRef(downloads);
+
+  // Redireciona para login se username estiver vazio
+  useEffect(() => {
+    if (!username) {
+      navigate("/login");
+    }
+  }, [username, navigate]);
+  useEffect(() => {
+    downloadsRef.current = downloads;
+  }, [downloads]);
 
   useEffect(() => {
     const fetchUrls = async () => {
       if (username) {
         try {
           const urls = await getMainUrls(username);
+          // Verifica vídeos já baixados
+          const baixados = await listDownloadedVideos();
           setDownloads(
-            (urls as { url: string; filename: string }[]).map((item, idx) => ({
-              id: Date.now() + idx,
-              url: item.url,
-              filename: item.filename || `video_${idx + 1}`,
-              ext: "mp4",
-              progress: 0,
-              status: "pendente",
-              canceled: false,
-            })),
+            (urls as { url: string; filename: string; status?: string }[]).map(
+              (item, idx) => {
+                const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
+                const baixado = baixados.find((b) => {
+                  const nomeSemExtNorm = nomeSemExt
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[^\w\s]/g, "");
+                  const baixadoSemExtNorm = b.name
+                    .replace(/\.[^/.]+$/, "")
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[^\w\s]/g, "");
+                  return baixadoSemExtNorm === nomeSemExtNorm;
+                });
+                return {
+                  id: Date.now() + idx,
+                  url: item.url,
+                  filename: item.filename || `video_${idx + 1}`,
+                  ext: "mp4",
+                  progress: baixado ? 100 : 0,
+                  status: item.status || (baixado ? "concluído" : "pendente"),
+                  canceled: false,
+                };
+              },
+            ),
           );
         } catch (err) {
-          // Opcional: mostrar erro ao usuário
           console.error("Erro ao buscar urls do backend:", err);
         }
       }
@@ -69,108 +103,162 @@ function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username]);
 
+  // Listener para progresso de download
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    (async () => {
+      unlisten = await listen<{ url: string; progress: number }>(
+        "download_progress",
+        async (event) => {
+          const { url, progress } = event.payload;
+          setDownloads((ds) =>
+            ds.map((d) =>
+              d.url === url
+                ? {
+                    ...d,
+                    progress: Math.round(progress),
+                    status: progress >= 100 ? "concluído" : "baixando",
+                  }
+                : d,
+            ),
+          );
+          // Se download finalizou, recarrega lista do backend para pegar novo título/status
+          if (progress >= 100 && username) {
+            try {
+              const urls = await getMainUrls(username);
+              const baixados = await listDownloadedVideos();
+              setDownloads(
+                (urls as { url: string; filename: string }[]).map(
+                  (item, idx) => {
+                    const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
+                    const baixado = baixados.find((b) => {
+                      const nomeSemExtNorm = nomeSemExt
+                        .toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[^\w\s]/g, "");
+                      const baixadoSemExtNorm = b.name
+                        .replace(/\.[^/.]+$/, "")
+                        .toLowerCase()
+                        .normalize("NFD")
+                        .replace(/[^\w\s]/g, "");
+                      return baixadoSemExtNorm === nomeSemExtNorm;
+                    });
+                    return {
+                      id: Date.now() + idx,
+                      url: item.url,
+                      filename: item.filename || `video_${idx + 1}`,
+                      ext: "mp4",
+                      progress: baixado ? 100 : 0,
+                      status: baixado ? "concluído" : "pendente",
+                      canceled: false,
+                    };
+                  },
+                ),
+              );
+            } catch (err) {
+              console.error("Erro ao atualizar lista após download:", err);
+            }
+          }
+        },
+      );
+    })();
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [setDownloads, username]);
+
   const handleRemove = (id: number) => {
     setDownloads((ds: Download[]) => ds.filter((d: Download) => d.id !== id));
   };
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!url.trim()) return;
-    setDownloads((prev: Download[]) => [
-      {
-        id: Date.now(),
-        url,
-        filename: filename.trim()
-          ? filename.trim()
-          : `video_${prev.length + 1}`,
-        ext: "mp4",
-        progress: 0,
-        status: "pendente",
-        canceled: false,
-      },
-      ...prev,
-    ]);
-    setUrl("");
-    setFilename("");
-    if (username) {
-      try {
-        await addMainUrl(
-          username,
-          url,
-          filename.trim() ? filename.trim() : undefined,
-        );
-      } catch (err) {
-        console.error("Erro ao salvar url principal no backend:", err);
-      }
-    }
-  };
+  // Certifique-se de salvar o usuário no localStorage após login/cadastro:
+  // localStorage.setItem("lastUser", username);
 
-  const handleDownloadAll = async () => {
+  const handleDownloadAll = () => {
     setDownloadingAll(true);
-    for (const d of downloads) {
+    downloads.forEach((d) => {
       if (d.status === "pendente") {
         setDownloads((ds: Download[]) =>
           ds.map((x: Download) =>
             x.id === d.id ? { ...x, status: "baixando", progress: 10 } : x,
           ),
         );
-        try {
-          await baixarEmCascata("Home", [d.url]);
-          console.log("SUCESSO: Download realmente baixado!");
-          setDownloads((ds: Download[]) =>
-            ds.map((x: Download) =>
-              x.id === d.id ? { ...x, status: "concluído", progress: 100 } : x,
-            ),
-          );
-          toast.success(`Download concluído: ${d.filename}`);
-        } catch (err) {
-          console.log("ERRO:", err);
-          setDownloads((ds: Download[]) =>
-            ds.map((x: Download) =>
-              x.id === d.id ? { ...x, status: "erro", progress: 0 } : x,
-            ),
-          );
-          if (typeof err === "string") {
-            toast.error(err);
-          } else {
-            toast.error(`Erro ao baixar: ${d.filename}`);
-          }
-        }
+        // Dispara o download sem await
+        baixarVideoTauri(undefined, username, d.url, d.filename, d.id)
+          .then(() => {
+            // O progresso e status serão atualizados via evento
+            toast.success(`Download concluído: ${d.filename}`);
+          })
+          .catch((err) => {
+            setDownloads((ds: Download[]) =>
+              ds.map((x: Download) =>
+                x.id === d.id ? { ...x, status: "erro", progress: 0 } : x,
+              ),
+            );
+            if (typeof err === "string") {
+              toast.error(err);
+            } else {
+              toast.error(`Erro ao baixar: ${d.filename}`);
+            }
+          });
       }
-    }
+    });
     setDownloadingAll(false);
   };
 
   const handleDownload = async (id: number) => {
     const d = downloads.find((x: Download) => x.id === id);
     if (!d) return;
+    // Se o campo filename estiver vazio, buscar o <title> do HTML
+    let filenameToUse = d.filename;
+    if (
+      !filenameToUse ||
+      filenameToUse.trim() === "" ||
+      filenameToUse.startsWith("video_")
+    ) {
+      try {
+        const title = await getTitleFromUrl(d.url);
+        filenameToUse = title;
+        // Atualiza no backend
+        if (username) {
+          await updateMainUrlTitle(username, d.url, d.url, title);
+        }
+        // Atualiza no frontend
+        setDownloads((ds: Download[]) =>
+          ds.map((x: Download) =>
+            x.id === id ? { ...x, filename: title } : x,
+          ),
+        );
+      } catch {
+        // Se não conseguir pegar o título, mantém o nome genérico
+        console.warn(
+          "Não foi possível obter o título do HTML, usando nome genérico.",
+        );
+      }
+    }
     setDownloads((ds: Download[]) =>
       ds.map((x: Download) =>
         x.id === id ? { ...x, status: "baixando", progress: 10 } : x,
       ),
     );
-    try {
-      await baixarEmCascata("Home", [d.url]);
-      console.log("SUCESSO: Download realmente baixado!");
-      setDownloads((ds: Download[]) =>
-        ds.map((x: Download) =>
-          x.id === id ? { ...x, status: "concluído", progress: 100 } : x,
-        ),
-      );
-      toast.success(`Download concluído: ${d.filename}`);
-    } catch (err) {
-      console.log("ERRO:", err);
-      setDownloads((ds: Download[]) =>
-        ds.map((x: Download) =>
-          x.id === id ? { ...x, status: "erro", progress: 0 } : x,
-        ),
-      );
-      if (typeof err === "string") {
-        toast.error(err);
-      } else {
-        toast.error(`Erro ao baixar: ${d.filename}`);
-      }
-    }
+    // Dispara o download sem await para não travar a UI
+    baixarVideoTauri(undefined, username, d.url, d.filename, d.id)
+      .then(() => {
+        // O status será atualizado pelo evento download_progress
+        toast.success(`Download concluído: ${filenameToUse}`);
+      })
+      .catch((err) => {
+        setDownloads((ds: Download[]) =>
+          ds.map((x: Download) =>
+            x.id === id ? { ...x, status: "erro", progress: 0 } : x,
+          ),
+        );
+        if (typeof err === "string") {
+          toast.error(err);
+        } else {
+          toast.error(`Erro ao baixar: ${filenameToUse}`);
+        }
+      });
   };
 
   const handleLogout = () => {
@@ -184,18 +272,32 @@ function Home() {
 
   const handleEditDownload = (
     id: number,
-    newVals: { filename: string; url: string },
+    newVals: { filename: string; url: string; status?: string },
   ) => {
     // Busca o valor original do backend antes de editar
     const original = downloads.find((d) => d.id === id);
     setDownloads((ds: Download[]) =>
-      ds.map((d) =>
-        d.id === id
-          ? { ...d, filename: newVals.filename, url: newVals.url }
-          : d,
-      ),
+      ds.map((d) => {
+        if (d.id !== id) return d;
+        // Se o usuário clicou em "Marcar como concluído"
+        if (newVals.status === "concluído") {
+          return { ...d, status: "concluído", progress: 100 };
+        }
+        // Se a URL mudou, resetar status, progresso e filename
+        if (original && newVals.url !== original.url) {
+          return {
+            ...d,
+            url: newVals.url,
+            filename: "",
+            progress: 0,
+            status: "pendente",
+          };
+        }
+        // Se só mudou o nome
+        return { ...d, filename: newVals.filename, url: newVals.url };
+      }),
     );
-    if (username && original) {
+    if (username && original && !newVals.status) {
       import("../../service/downloadsService").then(
         async ({ updateMainUrlTitle, getMainUrls }) => {
           try {
@@ -230,6 +332,60 @@ function Home() {
           }
         },
       );
+    }
+  };
+
+  // Função para adicionar novo download
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!url.trim()) return;
+    if (!username) {
+      toast.error("Usuário não identificado. Faça login novamente.");
+      navigate("/login");
+      return;
+    }
+    try {
+      // Chama o backend para adicionar a URL
+      await import("../../service/downloadsService").then(async ({ getMainUrls }) => {
+        // Aqui você pode adicionar lógica para salvar no backend se necessário
+        // Por simplicidade, apenas recarrega a lista do backend
+        const urls = await getMainUrls(username);
+        const baixados = await listDownloadedVideos();
+        setDownloads(
+          (urls as { url: string; filename: string; status?: string }[]).map(
+            (item, idx) => {
+              const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
+              const baixado = baixados.find((b) => {
+                const nomeSemExtNorm = nomeSemExt
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[^\w\s]/g, "");
+                const baixadoSemExtNorm = b.name
+                  .replace(/\.[^/.]+$/, "")
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[^\w\s]/g, "");
+                return baixadoSemExtNorm === nomeSemExtNorm;
+              });
+              return {
+                id: Date.now() + idx,
+                url: item.url,
+                filename: item.filename || `video_${idx + 1}`,
+                ext: "mp4",
+                progress: baixado ? 100 : 0,
+                status: item.status || (baixado ? "concluído" : "pendente"),
+                canceled: false,
+              };
+            },
+          ),
+        );
+      });
+      setUrl("");
+      setFilename("");
+      toast.success("Vídeo adicionado!");
+    } catch (err) {
+      console.error("Erro ao adicionar download:", err);
+      toast.error("Erro ao adicionar download. Tente novamente.");
     }
   };
 
@@ -293,7 +449,7 @@ function Home() {
             download={d}
             onDownload={handleDownload}
             onRemove={handleRemove}
-            onOpenFolder={() => openDownloadFolder("Home")}
+            onOpenFolder={() => openDownloadFolder("")}
             onEdit={handleEditDownload}
           />
         ))}

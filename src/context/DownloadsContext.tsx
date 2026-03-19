@@ -1,21 +1,25 @@
-import { useState, useEffect } from 'react';
-import type { ReactNode } from 'react';
-import { loadDownloads, saveDownloads } from '../service/downloadsService';
-import type { Download } from '@/types/download';
-
-
-
-
+import { useState, useEffect } from "react";
+import type { ReactNode } from "react";
+import { loadDownloads, saveDownloads } from "../service/downloadsService";
+import type { Download } from "@/types/download";
 
 // Mover DownloadsContext para um arquivo separado para Fast Refresh
 // src/context/DownloadsContextValue.ts
 // export const DownloadsContext = createContext<DownloadsContextType | undefined>(undefined);
 // Aqui mantemos apenas o provider
-import { DownloadsContext } from './DownloadsContextValue.ts';
+import { DownloadsContext } from "./DownloadsContextValue.ts";
 
-export function DownloadsProvider({ children }: { children: ReactNode }) {
-  const [username, setUsername] = useState(() => localStorage.getItem('lastUser') || '');
-  const [downloads, setDownloads] = useState<Download[]>(() => loadDownloads(username));
+export function DownloadsProvider({
+  children,
+  username,
+}: {
+  children: ReactNode;
+  username: string;
+}) {
+  console.log("[DownloadsProvider] Renderizou, username:", username);
+  const [downloads, setDownloads] = useState<Download[]>(() =>
+    loadDownloads(username),
+  );
 
   // Atualiza downloads sempre que username mudar
   useEffect(() => {
@@ -28,7 +32,9 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
   }, [downloads, username]);
 
   return (
-    <DownloadsContext.Provider value={{ downloads, setDownloads, username, setUsername }}>
+    <DownloadsContext.Provider
+      value={{ downloads, setDownloads, username, setUsername: () => {} }}
+    >
       {children}
     </DownloadsContext.Provider>
   );

@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "WebVideoDownloader",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.leona.webvideodownloader",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "WebVideoDownloader",
-        "width": 960,
-        "height": 1080,
+        "width": 1280,
+        "height": 1100,
         "resizable": true,
         "fullscreen": false,
         "x": 0,

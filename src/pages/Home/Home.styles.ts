@@ -14,8 +14,8 @@ export const ButtonRow = styled.div`
 `;
 export const FileNameInput = styled.input`
   width: 100%;
-  min-width: 400px;
-  max-width: 900px;
+  max-width: 100vw;
+  box-sizing: border-box;
   padding: 18px 20px;
   border-radius: 12px;
   border: 1.5px solid #363759;
@@ -134,13 +134,15 @@ export const UrlForm = styled.form`
   flex-direction: column;
   gap: 18px;
   margin-bottom: 18px;
-  width: 100%;
-  max-width: 900px;
+  width: 90%;
+  padding-left: 16px;
+  padding-right: 16px;
+  box-sizing: border-box;
 `;
 export const UrlInput = styled.input`
   width: 100%;
-  min-width: 400px;
-  max-width: 900px;
+  max-width: 100vw;
+  box-sizing: border-box;
   padding: 18px 20px;
   border-radius: 12px;
   border: 1.5px solid #363759;
@@ -272,7 +274,6 @@ export const ProgressFill = styled.div<{ status: string }>`
 `;
 export const Status = styled.div<{ status: string }>`
   min-width: 90px;
-  text-align: center;
   font-weight: 700;
   color: ${({ status }) =>
     status === "concluído"

@@ -23,7 +23,10 @@ interface DownloadCardProps {
   onDownload: (id: number) => void;
   onRemove: (id: number) => void;
   onOpenFolder: () => void;
-  onEdit?: (id: number, newVals: { filename: string; url: string }) => void;
+  onEdit?: (
+    id: number,
+    newVals: { filename: string; url: string; status?: string },
+  ) => void;
 }
 
 const DownloadCard: React.FC<DownloadCardProps> = ({
@@ -76,9 +79,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
               display: "flex",
               alignItems: "center",
             }}
-            disabled={
-              download.status === "baixando" || download.status === "concluído"
-            }
+            disabled={download.status === "baixando"}
           >
             <FiEdit2 />
           </button>
@@ -100,6 +101,32 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         </CardProgressTrack>
       </CardProgressBar>
       <CardActions>
+        <button
+          type="button"
+          title="Marcar como concluído"
+          onClick={() =>
+            onEdit &&
+            onEdit(download.id, {
+              filename: download.filename,
+              url: download.url,
+              status: "concluído",
+            })
+          }
+          disabled={download.status === "concluído"}
+          style={{
+            background: "#43a047",
+            color: "#fff",
+            border: "none",
+            borderRadius: 6,
+            padding: "6px 12px",
+            marginRight: 8,
+            fontWeight: 500,
+            cursor: download.status === "concluído" ? "not-allowed" : "pointer",
+            opacity: download.status === "concluído" ? 0.6 : 1,
+          }}
+        >
+          Marcar como Concluído
+        </button>
         <OpenFolderButton
           type="button"
           onClick={onOpenFolder}

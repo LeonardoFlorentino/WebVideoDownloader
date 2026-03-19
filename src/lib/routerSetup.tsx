@@ -1,21 +1,71 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import LoginScreen from '../pages/LoginScreen/LoginScreen';
-import RegisterScreen from '../pages/RegisterScreen/RegisterScreen';
-import Home from '../pages/Home/Home';
-import UserPanel from '../pages/UserPanel/UserPanel';
-import PlaylistPanel from '../pages/PlaylistPanel/PlaylistPanel';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import LoginScreen from "../pages/LoginScreen/LoginScreen";
+import RegisterScreen from "../pages/RegisterScreen/RegisterScreen";
+import Home from "../pages/Home/Home";
+import UserPanel from "../pages/UserPanel/UserPanel";
+import PlaylistPanel from "../pages/PlaylistPanel/PlaylistPanel";
 
-import type { User } from '@/types/user';
+import type { User } from "@/types/user";
 
-export default function RouterSetup({ user, setUser }: { user: User | null, setUser: (u: User | null) => void }) {
+export default function RouterSetup({
+  user,
+  setUser,
+}: {
+  user: User | null;
+  setUser: (u: User | null) => void;
+}) {
+  console.log("[RouterSetup] user:", user);
+  if (user) {
+    console.log("[RouterSetup] user.username:", user.username);
+  }
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginScreen onLogin={(username) => setUser({ username })} />} />
-        <Route path="/register" element={<RegisterScreen onRegister={() => {}} />} />
-        <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
-        <Route path="/user" element={user ? <UserPanel /> : <Navigate to="/login" />} />
-        <Route path="/playlists" element={user ? <PlaylistPanel playlists={[]} onDownload={() => {}} /> : <Navigate to="/login" />} />
+        <Route
+          path="/login"
+          element={
+            <LoginScreen
+              onLogin={(token) => {
+                // Salva o token e define o usuário
+                localStorage.setItem("loginToken", token);
+                try {
+                  const parsed = JSON.parse(atob(token));
+                  if (parsed && typeof parsed.username === "string") {
+                    setUser({ username: parsed.username });
+                  } else {
+                    setUser(null);
+                  }
+                } catch {
+                  setUser(null);
+                }
+              }}
+            />
+          }
+        />
+        <Route
+          path="/register"
+          element={<RegisterScreen onRegister={() => {}} />}
+        />
+        <Route
+          path="/"
+          element={
+            user ? <Home username={user.username} /> : <Navigate to="/login" />
+          }
+        />
+        <Route
+          path="/user"
+          element={user ? <UserPanel /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/playlists"
+          element={
+            user ? (
+              <PlaylistPanel playlists={[]} onDownload={() => {}} />
+            ) : (
+              <Navigate to="/login" />
+            )
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
