@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { FiTrash2, FiEdit2 } from "react-icons/fi";
 import { EditDownloadModal } from "../../../components/EditDownloadModal/EditDownloadModal";
+
 import {
   CardContainer,
   CardFileInfo,
@@ -92,13 +93,43 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
           onCancel={handleModalCancel}
         />
       </CardTopRow>
-      <CardProgressBar>
-        <CardProgressTrack>
+      <CardProgressBar
+        style={{ position: "relative", height: 24, marginTop: 8 }}
+      >
+        <CardProgressTrack style={{ height: 24 }}>
           <CardProgressFill
             $status={download.status}
-            style={{ width: `${download.progress}%` }}
+            style={{
+              width: `${download.progress}%`,
+              height: 24,
+              borderRadius: 6,
+              position: "absolute",
+              left: 0,
+              top: 0,
+            }}
           />
         </CardProgressTrack>
+        <span
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: 24,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontWeight: 700,
+            color: "#fff",
+            zIndex: 1,
+            pointerEvents: "none",
+            fontSize: 16,
+            letterSpacing: 0.5,
+            textShadow: "0 1px 4px #23284d, 0 0 2px #23284d, 0 0 6px #23284d",
+          }}
+        >
+          {`${typeof download.progress === "number" ? download.progress : 0}%`}
+        </span>
       </CardProgressBar>
       <CardActions>
         <button
