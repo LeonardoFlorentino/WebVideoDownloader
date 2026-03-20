@@ -5,19 +5,16 @@ use tokio::time::sleep;
 /// compensando bordas do Windows.
 pub async fn ajustar_janela_metade_tela(window: WebviewWindow, barra_tarefas: Option<f64>) {
     let screens = window.available_monitors().unwrap();
-    println!("Monitores detectados:");
-    for (i, m) in screens.iter().enumerate() {
-        println!("  [{}] pos=({}, {}) size={}x{} scale={}", i, m.position().x, m.position().y, m.size().width, m.size().height, m.scale_factor());
+    for (_i, _m) in screens.iter().enumerate() {
     }
     // Seleciona o monitor de maior largura
-    let (monitor_idx, _monitor, screen_width, screen_height, scale_factor, pos_x, pos_y) = screens.iter().enumerate()
-        .map(|(i, m)| (i, m, m.size().width as f64, m.size().height as f64, m.scale_factor(), m.position().x, m.position().y))
+    let (_monitor_idx, _monitor, screen_width, screen_height, _scale_factor, pos_x, pos_y) = screens.iter().enumerate()
+        .map(|(_i, _m)| (_i, _m, _m.size().width as f64, _m.size().height as f64, _m.scale_factor(), _m.position().x, _m.position().y))
         .max_by(|a, b| a.2.partial_cmp(&b.2).unwrap())
         .unwrap();
     let half_width = (screen_width / 2.0).round();
     let taskbar_height = barra_tarefas.unwrap_or(52.0); // valor padrão
     let usable_height = screen_height - taskbar_height;
-    println!("Monitor selecionado: [{}] pos=({}, {}) size={}x{} scale={}", monitor_idx, pos_x, pos_y, screen_width, screen_height, scale_factor);
     // Ajusta a janela para o monitor correto
     let incremento_altura = 12.0;
     let alvo_altura = usable_height + incremento_altura;
@@ -44,8 +41,6 @@ pub async fn ajustar_janela_metade_tela(window: WebviewWindow, barra_tarefas: Op
             let diff_altura = alvo_altura - altura_atual;
             let largura_corrigida = half_width + diff_largura;
             let altura_corrigida = alvo_altura + diff_altura;
-            println!("Ajustando largura: alvo={} atual={} diff={} corrigida={}", half_width, largura_atual, diff_largura, largura_corrigida);
-            println!("Ajustando altura: alvo={} atual={} diff={} corrigida={}", alvo_altura, altura_atual, diff_altura, altura_corrigida);
             let _ = window2.set_size(tauri::Size::Logical(LogicalSize {
                 width: largura_corrigida,
                 height: altura_corrigida,
@@ -56,8 +51,7 @@ pub async fn ajustar_janela_metade_tela(window: WebviewWindow, barra_tarefas: Op
                 x: desloc_x,
                 y: desloc_y,
             }));
-            if let Ok(win_size2) = window2.outer_size() {
-                println!("Window size after correction: {}x{}", win_size2.width, win_size2.height);
+            if let Ok(_win_size2) = window2.outer_size() {
             }
         }
     });

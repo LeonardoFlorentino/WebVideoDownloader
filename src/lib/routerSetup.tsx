@@ -14,10 +14,6 @@ export default function RouterSetup({
   user: User | null;
   setUser: (u: User | null) => void;
 }) {
-  console.log("[RouterSetup] user:", user);
-  if (user) {
-    console.log("[RouterSetup] user.username:", user.username);
-  }
   return (
     <BrowserRouter>
       <Routes>

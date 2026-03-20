@@ -46,51 +46,47 @@ pub fn update_main_url_title(username: String, old_url: String, new_url: String,
 
 pub fn get_main_urls(username: String) -> Result<Vec<MainUrl>, String> {
     let path = crate::backend::filesystem::get_project_root().join("user_data/user.json");
-    println!("[get_main_urls] Caminho do user.json: {:?}", path);
     let user_list: UserList = if let Ok(data) = std::fs::read_to_string(&path) {
-        println!("[get_main_urls] user.json lido com sucesso");
         serde_json::from_str(&data).unwrap_or_default()
     } else {
-        println!("[get_main_urls] user.json não encontrado, retornando lista vazia");
         UserList::default()
     };
     if let Some(user) = user_list.users.iter().find(|u| u.username == username) {
-        println!("[get_main_urls] Usuário encontrado: {}. main_urls: {:?}", username, user.main_urls);
         Ok(user.main_urls.clone())
     } else {
-        println!("[get_main_urls] Usuário NÃO encontrado: {}", username);
+        // ...existing code...
         Err("Usuário não encontrado".to_string())
     }
 }
 
 pub fn add_main_url(username: String, url: String, filename: Option<String>) -> Result<(), String> {
     let path = crate::backend::filesystem::get_project_root().join("user_data/user.json");
-    println!("[add_main_url] Caminho do user.json: {:?}", path);
+    // ...existing code...
     let mut user_list: UserList = if let Ok(data) = std::fs::read_to_string(&path) {
-        println!("[add_main_url] user.json lido com sucesso");
+        // ...existing code...
         serde_json::from_str(&data).unwrap_or_default()
     } else {
-        println!("[add_main_url] user.json não encontrado, criando novo");
+        // ...existing code...
         UserList::default()
     };
     if let Some(user) = user_list.users.iter_mut().find(|u| u.username == username) {
-        println!("[add_main_url] Usuário encontrado: {}", username);
+        // ...existing code...
         if !user.main_urls.iter().any(|mu| mu.url == url) {
-            println!("[add_main_url] Adicionando nova URL: {}", url);
+            // ...existing code...
             user.main_urls.push(MainUrl {
                 url: url.clone(),
                 filename: filename.clone().unwrap_or_else(|| "video".to_string()),
                 status: "pendente".to_string(),
             });
         } else {
-            println!("[add_main_url] URL já existe para o usuário");
+            // ...existing code...
         }
         let json = serde_json::to_string_pretty(&user_list).map_err(|e| e.to_string())?;
         std::fs::write(&path, json).map_err(|e| e.to_string())?;
-        println!("[add_main_url] user.json salvo com sucesso");
+        // ...existing code...
         Ok(())
     } else {
-        println!("[add_main_url] Usuário NÃO encontrado: {}", username);
+        // ...existing code...
         Err("Usuário não encontrado".to_string())
     }
 }

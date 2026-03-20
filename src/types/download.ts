@@ -6,4 +6,5 @@ export interface Download {
   progress: number;
   status: string;
   canceled: boolean;
+  playlist?: string; // nome da playlist ou "" se não houver
 }

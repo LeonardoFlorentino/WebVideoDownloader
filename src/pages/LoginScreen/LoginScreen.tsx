@@ -58,7 +58,6 @@ import {
 } from "./LoginScreen.styles";
 import { invoke } from "@tauri-apps/api/core";
 
-console.log("[LoginScreen] Renderizou");
 export default function LoginScreen({
   onLogin,
 }: {
@@ -82,7 +81,9 @@ export default function LoginScreen({
         setUsername(username || "");
         setPassword(password || "");
         setRemember(true);
-      } catch {}
+      } catch {
+        // Ignora erro ao ler rememberedLogin
+      }
     }
     // Se já existe token válido, loga automaticamente (apenas se não estiver logado)
     if (!loggedIn) {
@@ -100,14 +101,12 @@ export default function LoginScreen({
     setLoading(true);
     setError(null);
     try {
-      console.log("Login: tentando autenticar", { username, password });
-      const result = await invoke("autenticar_usuario_tauri", {
+      await invoke("autenticar_usuario_tauri", {
         username,
         password,
       });
-      console.log("Login: resultado do invoke", result);
       // Se não houve exceção, o login foi bem-sucedido (result == null)
-      let token: string = generateToken(username);
+      const token: string = generateToken(username);
       if (remember) {
         localStorage.setItem(
           "rememberedLogin",
@@ -120,9 +119,9 @@ export default function LoginScreen({
       localStorage.setItem("lastUser", username);
       onLogin(token);
       setLoggedIn(true);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Login: erro no invoke", err);
-      setError(err?.toString() || "Usuário ou senha inválidos");
+      setError((err as Error)?.toString() || "Usuário ou senha inválidos");
     }
     setLoading(false);
   };

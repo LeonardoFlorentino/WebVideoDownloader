@@ -1,4 +1,3 @@
-
 import { openDownloadFolder } from "../../service/openFolder";
 import DownloadCard from "./DownloadCard/DownloadCard";
 import React, { useState } from "react";
@@ -34,7 +33,6 @@ import { listDownloadedVideos } from "../../lib/listVideos";
 
 type HomeProps = { username: string };
 function Home({ username }: HomeProps) {
-    console.log("[Home] username prop:", username);
   const [url, setUrl] = useState("");
   const { downloads, setDownloads } = useDownloads() as {
     downloads: Download[];
@@ -86,6 +84,7 @@ function Home({ username }: HomeProps) {
                   progress: baixado ? 100 : 0,
                   status: item.status || (baixado ? "concluído" : "pendente"),
                   canceled: false,
+                  playlist: "", // sempre avulso na Home
                 };
               },
             ),
@@ -346,40 +345,42 @@ function Home({ username }: HomeProps) {
     }
     try {
       // Chama o backend para adicionar a URL
-      await import("../../service/downloadsService").then(async ({ getMainUrls }) => {
-        // Aqui você pode adicionar lógica para salvar no backend se necessário
-        // Por simplicidade, apenas recarrega a lista do backend
-        const urls = await getMainUrls(username);
-        const baixados = await listDownloadedVideos();
-        setDownloads(
-          (urls as { url: string; filename: string; status?: string }[]).map(
-            (item, idx) => {
-              const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
-              const baixado = baixados.find((b) => {
-                const nomeSemExtNorm = nomeSemExt
-                  .toLowerCase()
-                  .normalize("NFD")
-                  .replace(/[^\w\s]/g, "");
-                const baixadoSemExtNorm = b.name
-                  .replace(/\.[^/.]+$/, "")
-                  .toLowerCase()
-                  .normalize("NFD")
-                  .replace(/[^\w\s]/g, "");
-                return baixadoSemExtNorm === nomeSemExtNorm;
-              });
-              return {
-                id: Date.now() + idx,
-                url: item.url,
-                filename: item.filename || `video_${idx + 1}`,
-                ext: "mp4",
-                progress: baixado ? 100 : 0,
-                status: item.status || (baixado ? "concluído" : "pendente"),
-                canceled: false,
-              };
-            },
-          ),
-        );
-      });
+      await import("../../service/downloadsService").then(
+        async ({ getMainUrls }) => {
+          // Aqui você pode adicionar lógica para salvar no backend se necessário
+          // Por simplicidade, apenas recarrega a lista do backend
+          const urls = await getMainUrls(username);
+          const baixados = await listDownloadedVideos();
+          setDownloads(
+            (urls as { url: string; filename: string; status?: string }[]).map(
+              (item, idx) => {
+                const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
+                const baixado = baixados.find((b) => {
+                  const nomeSemExtNorm = nomeSemExt
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[^\w\s]/g, "");
+                  const baixadoSemExtNorm = b.name
+                    .replace(/\.[^/.]+$/, "")
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/[^\w\s]/g, "");
+                  return baixadoSemExtNorm === nomeSemExtNorm;
+                });
+                return {
+                  id: Date.now() + idx,
+                  url: item.url,
+                  filename: item.filename || `video_${idx + 1}`,
+                  ext: "mp4",
+                  progress: baixado ? 100 : 0,
+                  status: item.status || (baixado ? "concluído" : "pendente"),
+                  canceled: false,
+                };
+              },
+            ),
+          );
+        },
+      );
       setUrl("");
       setFilename("");
       toast.success("Vídeo adicionado!");
@@ -449,7 +450,9 @@ function Home({ username }: HomeProps) {
             download={d}
             onDownload={handleDownload}
             onRemove={handleRemove}
-            onOpenFolder={() => openDownloadFolder("")}
+            onOpenFolder={() =>
+              openDownloadFolder(d.playlist ? d.playlist : "")
+            }
             onEdit={handleEditDownload}
           />
         ))}

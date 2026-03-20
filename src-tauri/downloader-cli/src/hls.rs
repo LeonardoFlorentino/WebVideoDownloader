@@ -4,7 +4,6 @@ use std::path::PathBuf;
 use reqwest::blocking::Client;
 
 pub fn baixar_hls(m3u8_url: &str, filename: &str, playlist_name: Option<&str>) -> Result<(), String> {
-    println!("[HLS] Baixando playlist: {}", m3u8_url);
     let client = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
         .build()
@@ -16,7 +15,6 @@ pub fn baixar_hls(m3u8_url: &str, filename: &str, playlist_name: Option<&str>) -
         return Err(format!("HTTP {}: {}", resp.status().as_u16(), resp.status()));
     }
     let text = resp.text().map_err(|e| format!("Erro ao ler playlist: {}", e))?;
-    println!("[HLS] Conteúdo da playlist:\n{}", text);
     let base_url = m3u8_url.rsplit_once('/').map(|(base, _)| base).unwrap_or("");
     let mut ts_urls = Vec::new();
     let mut is_master_playlist = false;
@@ -56,7 +54,6 @@ pub fn baixar_hls(m3u8_url: &str, filename: &str, playlist_name: Option<&str>) -
     if ts_urls.is_empty() && is_master_playlist && !variant_playlists.is_empty() {
         // Seleciona a maior resolução (maior bandwidth)
         let (bw, url) = variant_playlists.iter().max_by_key(|(bw, _)| *bw).unwrap();
-        println!("[HLS] Master playlist detectada. Selecionando sub-playlist de maior qualidade (bandwidth: {}) => {}", bw, url);
         // Recursivamente baixa a sub-playlist
         return baixar_hls(url, filename);
     }
@@ -75,12 +72,10 @@ pub fn baixar_hls(m3u8_url: &str, filename: &str, playlist_name: Option<&str>) -
     }
     let mut file = File::create(&path).map_err(|e| format!("Erro ao criar arquivo: {}", e))?;
     for (i, ts_url) in ts_urls.iter().enumerate() {
-        println!("[HLS] Baixando segmento {}/{}", i+1, ts_urls.len());
         let seg = client.get(ts_url)
             .send().map_err(|e| format!("Erro ao baixar segmento: {}", e))?
             .bytes().map_err(|e| format!("Erro ao ler segmento: {}", e))?;
         file.write_all(&seg).map_err(|e| format!("Erro ao salvar segmento: {}", e))?;
     }
-    println!("[HLS] Download finalizado: {:?}", path);
     Ok(())
 }

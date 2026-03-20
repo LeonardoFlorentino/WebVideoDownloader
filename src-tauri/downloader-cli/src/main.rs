@@ -31,7 +31,6 @@ fn main() {
         baixar_video(url, Some(output), playlist)
     };
     fn baixar_player_jmvstream(player_url: &str, output: &str, playlist: Option<&str>) -> Result<(), String> {
-        println!("[EXTRAÇÃO] Baixando HTML do player: {}", player_url);
         let client = reqwest::blocking::Client::builder()
             .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
             .build()
@@ -51,7 +50,6 @@ fn main() {
             Some(url) => url,
             None => return Err("Não foi possível extrair o link .m3u8 do player".to_string()),
         };
-        println!("[EXTRAÇÃO] Link .m3u8 extraído: {}", m3u8_url);
         hls::baixar_hls(m3u8_url, output, playlist)
     }
     if let Err(e) = res {
@@ -61,7 +59,6 @@ fn main() {
 }
 
 fn baixar_video(url: &str, filename: Option<&str>, playlist_name: Option<&str>) -> Result<(), String> {
-    println!("[CLI] Iniciando download: {}", url);
     let response = reqwest::blocking::get(url).map_err(|e| format!("Erro ao baixar: {}", e))?;
     if !response.status().is_success() {
         return Err(format!("HTTP {}: {}", response.status().as_u16(), response.status()));
@@ -79,6 +76,5 @@ fn baixar_video(url: &str, filename: Option<&str>, playlist_name: Option<&str>) 
     let bytes = response.bytes().map_err(|e| format!("Erro ao ler bytes: {}", e))?;
     let downloaded = bytes.len() as u64;
     file.write_all(&bytes).map_err(|e| format!("Erro ao salvar: {}", e))?;
-    println!("[CLI] Download finalizado: {:?} ({} bytes)", path, downloaded);
     Ok(())
 }

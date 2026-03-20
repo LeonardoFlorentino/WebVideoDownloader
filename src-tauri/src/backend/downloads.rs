@@ -1,8 +1,6 @@
 use tauri::Emitter;
 use tauri::Window;
-// ...existing code...
 use regex::Regex;
-// ...existing code...
 
 pub fn baixar_video(url: &str, filename: &str) -> Result<(), String> {
     let response = reqwest::blocking::get(url).map_err(|e| format!("Erro ao baixar: {}", e))?;

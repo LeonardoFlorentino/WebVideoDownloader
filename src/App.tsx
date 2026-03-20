@@ -25,30 +25,21 @@ function getUsernameFromToken(token: string | null): string | null {
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
-  console.log("[App] INÍCIO - user:", user);
 
-  useEffect(() => {
-    console.log("[App] Renderizou. user:", user);
-  });
+  useEffect(() => {});
 
   // Atualiza user ao montar e quando loginToken mudar
   useEffect(() => {
     const updateUserFromToken = () => {
       const token = localStorage.getItem("loginToken");
-      console.log("[App] updateUserFromToken token:", token);
       if (isTokenValid(token)) {
         const username = getUsernameFromToken(token);
-        console.log("[App] Token válido, username:", username);
         if (username) {
-          setUser((prev) => {
-            console.log("[App] setUser chamado, username:", username);
-            return { username };
-          });
+          setUser(() => ({ username }));
         } else {
           setUser(null);
         }
       } else {
-        console.log("[App] Token inválido ou ausente");
         setUser(null);
       }
     };

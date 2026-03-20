@@ -16,7 +16,6 @@ export function DownloadsProvider({
   children: ReactNode;
   username: string;
 }) {
-  console.log("[DownloadsProvider] Renderizou, username:", username);
   const [downloads, setDownloads] = useState<Download[]>(() =>
     loadDownloads(username),
   );
