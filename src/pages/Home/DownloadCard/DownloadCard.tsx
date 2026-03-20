@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { FiTrash2, FiEdit2 } from "react-icons/fi";
-import { EditDownloadModal } from "../../../components/EditDownloadModal/EditDownloadModal";
+import React from "react";
+import { ClipLoader } from "react-spinners";
 
+import { FiTrash2, FiEdit2 } from "react-icons/fi";
 import {
   CardContainer,
   CardFileInfo,
@@ -37,15 +37,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
   onOpenFolder,
   onEdit,
 }) => {
-  const [modalOpen, setModalOpen] = useState(false);
-  const handleEdit = () => setModalOpen(true);
-  const handleModalSave = (filename: string, url: string) => {
-    if (onEdit && (filename !== download.filename || url !== download.url)) {
-      onEdit(download.id, { filename, url });
-    }
-    setModalOpen(false);
-  };
-  const handleModalCancel = () => setModalOpen(false);
+  const handleEdit = () => {};
   return (
     <CardContainer>
       <CardTopRow>
@@ -85,13 +77,6 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
             <FiEdit2 />
           </button>
         </CardUrlAndStatus>
-        <EditDownloadModal
-          isOpen={modalOpen}
-          initialFilename={download.filename}
-          initialUrl={download.url}
-          onSave={handleModalSave}
-          onCancel={handleModalCancel}
-        />
       </CardTopRow>
       <CardProgressBar
         style={{ position: "relative", height: 24, marginTop: 8 }}
@@ -184,13 +169,35 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
                 : "pointer",
             opacity:
               download.status === "concluído" || download.status === "baixando"
-                ? 0.6
+                ? 0.7
                 : 1,
             transition: "background 0.2s",
             outline: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            fontSize: 16,
+            letterSpacing: 0.2,
+            minWidth: 90,
           }}
         >
-          Baixar
+          {download.status === "baixando" ? (
+            <>
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginRight: 6,
+                }}
+              >
+                <ClipLoader color="#fff" size={16} speedMultiplier={1.1} />
+              </span>
+              Baixando...
+            </>
+          ) : (
+            "Baixar"
+          )}
         </button>
         <button
           type="button"

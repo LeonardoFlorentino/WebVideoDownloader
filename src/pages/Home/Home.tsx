@@ -102,11 +102,12 @@ function Home({ username }: HomeProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username]);
 
-  // Listener para progresso de download
+  // Listeners para progresso e finalização de download
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    let unlistenProgress: (() => void) | undefined;
+    let unlistenFinished: (() => void) | undefined;
     (async () => {
-      unlisten = await listen<{ url: string; progress: number }>(
+      unlistenProgress = await listen<{ url: string; progress: number }>(
         "download_progress",
         async (event) => {
           const { url, progress } = event.payload;
@@ -121,50 +122,34 @@ function Home({ username }: HomeProps) {
                 : d,
             ),
           );
-          // Se download finalizou, recarrega lista do backend para pegar novo título/status
-          if (progress >= 100 && username) {
-            try {
-              const urls = await getMainUrls(username);
-              const baixados = await listDownloadedVideos();
-              setDownloads(
-                (urls as { url: string; filename: string }[]).map(
-                  (item, idx) => {
-                    const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
-                    const baixado = baixados.find((b) => {
-                      const nomeSemExtNorm = nomeSemExt
-                        .toLowerCase()
-                        .normalize("NFD")
-                        .replace(/[^\w\s]/g, "");
-                      const baixadoSemExtNorm = b.name
-                        .replace(/\.[^/.]+$/, "")
-                        .toLowerCase()
-                        .normalize("NFD")
-                        .replace(/[^\w\s]/g, "");
-                      return baixadoSemExtNorm === nomeSemExtNorm;
-                    });
-                    return {
-                      id: Date.now() + idx,
-                      url: item.url,
-                      filename: item.filename || `video_${idx + 1}`,
-                      ext: "mp4",
-                      progress: baixado ? 100 : 0,
-                      status: baixado ? "concluído" : "pendente",
-                      canceled: false,
-                    };
-                  },
-                ),
-              );
-            } catch (err) {
-              console.error("Erro ao atualizar lista após download:", err);
-            }
-          }
         },
       );
+      unlistenFinished = await listen<{
+        url: string;
+        filename: string;
+        status: string;
+        error?: string;
+      }>("download_finished", async (event) => {
+        const { url, status, error } = event.payload;
+        setDownloads((ds) =>
+          ds.map((d) =>
+            d.url === url
+              ? {
+                  ...d,
+                  status: status === "concluido" ? "concluído" : status,
+                  progress: status === "concluido" ? 100 : d.progress,
+                  error: error || undefined,
+                }
+              : d,
+          ),
+        );
+      });
     })();
     return () => {
-      if (unlisten) unlisten();
+      if (unlistenProgress) unlistenProgress();
+      if (unlistenFinished) unlistenFinished();
     };
-  }, [setDownloads, username]);
+  }, [setDownloads]);
 
   const handleRemove = (id: number) => {
     setDownloads((ds: Download[]) => ds.filter((d: Download) => d.id !== id));

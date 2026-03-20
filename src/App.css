@@ -63,7 +63,9 @@
   font-weight: 500;
   cursor: pointer;
   box-shadow: 0 1px 4px #0002;
-  transition: background 0.2s, box-shadow 0.2s;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s;
 }
 .video-actions button:hover {
   background: linear-gradient(90deg, #43b581 40%, #6c63ff 100%);
@@ -238,7 +240,7 @@
 
   &::before,
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: -4.5px;
     border: 5px solid transparent;
@@ -252,4 +254,32 @@
     right: 0;
     border-right-color: var(--border);
   }
+}
+
+/* Spinner animation for download button */
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.download-spinner {
+  animation: spin 0.7s linear infinite;
+  display: block;
+}
+
+.download-spinner circle {
+  stroke: #fff;
+  stroke-width: 5;
+  fill: none;
+}
+
+.download-spinner .spinner-bg {
+  opacity: 0.15;
+}
+
+.download-spinner .spinner-fg {
+  stroke: #43b581;
+  stroke-dasharray: 90 60;
+  stroke-linecap: round;
 }

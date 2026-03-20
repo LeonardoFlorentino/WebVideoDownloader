@@ -1,3 +1,4 @@
+use tauri::Emitter;
 use crate::backend::downloads::{baixar_video, baixar_hls_emit, baixar_player_jmvstream};
 use crate::backend::listing::listar_videos_baixados;
 use crate::main_url_title_from_html::get_title_from_url;
@@ -8,20 +9,24 @@ use std::collections::HashMap;
 
 #[tauri::command]
 pub fn baixar_video_tauri(window: Window, username: String, url: String, filename: String, id: Option<u64>) -> CommandResult<()> {
-    let result = if url.contains("player.jmvstream.com") {
-        baixar_player_jmvstream(&window, &username, &url, &filename, id)
-    } else if url.ends_with(".m3u8") || url.contains(".m3u8?") {
-        baixar_hls_emit(&window, &url, &filename, id)
-    } else {
-        baixar_video(&url, &filename)
-    };
-    match result {
-        Ok(_) => CommandResult { ok: true, data: Some(()), error: None },
-        Err(e) => {
-            eprintln!("Erro baixar_video_tauri: {}", e);
-            CommandResult { ok: false, data: None, error: Some(e) }
-        }
-    }
+    let window_clone = window.clone();
+    let username_clone = username.clone();
+    let url_clone = url.clone();
+    let filename_clone = filename.clone();
+    std::thread::spawn(move || {
+        let result = if url_clone.contains("player.jmvstream.com") {
+            baixar_player_jmvstream(&window_clone, &username_clone, &url_clone, &filename_clone, id)
+        } else if url_clone.ends_with(".m3u8") || url_clone.contains(".m3u8?") {
+            baixar_hls_emit(&window_clone, &url_clone, &filename_clone, id)
+        } else {
+            baixar_video(&url_clone, &filename_clone)
+        };
+        let _ = match result {
+            Ok(_) => window_clone.emit("download_finished", serde_json::json!({ "url": url_clone, "filename": filename_clone, "status": "concluido" })),
+            Err(e) => window_clone.emit("download_finished", serde_json::json!({ "url": url_clone, "filename": filename_clone, "status": "erro", "error": e })),
+        };
+    });
+    CommandResult { ok: true, data: Some(()), error: None }
 }
 
 #[tauri::command(rename = "baixar_em_cascata")]

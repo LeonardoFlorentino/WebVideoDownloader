@@ -1,3 +1,5 @@
+import styled from "styled-components";
+
 export const CardTopRow = styled.div`
   display: flex;
   align-items: center;
@@ -17,8 +19,6 @@ export const CardUrlAndStatus = styled.div`
   min-width: 0;
   height: 100%;
 `;
-import styled from "styled-components";
-
 export const CardContainer = styled.div`
   background: #23284d;
   border-radius: 10px;
