@@ -42,6 +42,7 @@ function Home({ username }: HomeProps) {
   };
   const [filename, setFilename] = useState("");
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [pausando, setPausando] = useState<{ [url: string]: boolean }>({});
   const navigate = useNavigate();
   const downloadsRef = useRef(downloads);
 
@@ -120,7 +121,7 @@ function Home({ username }: HomeProps) {
                 ? {
                     ...d,
                     progress: progress,
-                    status: progress >= 100 ? "concluído" : "baixando",
+                    status: "baixando",
                   }
                 : d,
             ),
@@ -154,6 +155,7 @@ function Home({ username }: HomeProps) {
           setDownloads((ds) =>
             ds.map((d) => (d.url === url ? { ...d, status: "pendente" } : d)),
           );
+          setPausando((prev) => ({ ...prev, [url]: false }));
         },
       );
     })();
@@ -245,7 +247,10 @@ function Home({ username }: HomeProps) {
     const d = downloads.find((x: Download) => x.id === id);
     if (!d) return;
     if (action === "pause") {
-      if (d) await pausarDownloadTauri(d.url);
+      if (d) {
+        setPausando((prev) => ({ ...prev, [d.url]: true }));
+        await pausarDownloadTauri(d.url);
+      }
       return;
     }
     if (action === "resume") {
@@ -441,6 +446,7 @@ function Home({ username }: HomeProps) {
             onOpenFolder={() =>
               openDownloadFolder(d.playlist ? d.playlist : "")
             }
+            pausando={!!pausando[d.url]}
           />
         ))}
       </DownloadList>

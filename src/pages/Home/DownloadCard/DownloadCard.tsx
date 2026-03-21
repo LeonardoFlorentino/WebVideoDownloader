@@ -1,3 +1,4 @@
+import { ClipLoader } from "react-spinners";
 import React from "react";
 import { FiTrash2, FiEdit2, FiPause } from "react-icons/fi";
 import {
@@ -23,7 +24,7 @@ interface DownloadCardProps {
   onDownload: (id: number, action?: "pause" | "resume") => void;
   onRemove: (id: number) => void;
   onOpenFolder: () => void;
-  // onEdit removido pois não está em uso
+  pausando?: boolean;
 }
 
 const DownloadCard: React.FC<DownloadCardProps> = ({
@@ -31,6 +32,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
   onDownload,
   onRemove,
   onOpenFolder,
+  pausando,
 }) => {
   return (
     <CardContainer>
@@ -144,13 +146,34 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
           <PauseButton
             type="button"
             onClick={() => onDownload(download.id, "pause")}
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              cursor: pausando ? "not-allowed" : "pointer",
+              opacity: pausando ? 0.6 : 1,
+              pointerEvents: pausando ? "none" : "auto",
+            }}
+            disabled={!!pausando}
           >
-            <FiPause size={15} style={{ verticalAlign: "middle" }} />
+            {pausando ? (
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginRight: 6,
+                  gap: 4,
+                }}
+              >
+                <ClipLoader color="#fff" size={12} speedMultiplier={1.1} />
+              </span>
+            ) : (
+              <FiPause size={15} style={{ verticalAlign: "middle" }} />
+            )}
             <span
               style={{ lineHeight: 1, display: "flex", alignItems: "center" }}
             >
-              Pausar
+              {pausando ? "Pausando..." : "Pausar"}
             </span>
           </PauseButton>
         )}

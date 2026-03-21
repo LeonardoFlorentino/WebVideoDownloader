@@ -72,9 +72,14 @@ pub fn baixar_video_emit(window: Option<&Window>, url: &str, filename: &str) -> 
         .send().map_err(|e| format!("Erro ao baixar: {}", e))?;
     let mut current = downloaded;
     let mut buffer = [0u8; 8192];
+    let completed;
     loop {
         let n = response.read(&mut buffer).map_err(|e| format!("Erro ao ler chunk: {}", e))?;
-        if n == 0 { break; }
+        if n == 0 {
+            // Chegou ao fim do arquivo normalmente
+            completed = true;
+            break;
+        }
         file.write_all(&buffer[..n]).map_err(|e| format!("Erro ao salvar: {}", e))?;
         current += n as u64;
         // Atualiza progresso persistente
@@ -106,19 +111,21 @@ pub fn baixar_video_emit(window: Option<&Window>, url: &str, filename: &str) -> 
         }
     }
 
-    // Verifica se arquivo está vazio
-    let meta = std::fs::metadata(&path).map_err(|e| format!("Erro ao finalizar arquivo: {}", e))?;
-    if meta.len() == 0 {
-        progress.status = "erro".to_string();
-        update_progress(url, progress.clone());
-        return Err("Arquivo criado mas está vazio".to_string());
-    }
+    if completed {
+        // Verifica se arquivo está vazio
+        let meta = std::fs::metadata(&path).map_err(|e| format!("Erro ao finalizar arquivo: {}", e))?;
+        if meta.len() == 0 {
+            progress.status = "erro".to_string();
+            update_progress(url, progress.clone());
+            return Err("Arquivo criado mas está vazio".to_string());
+        }
 
-    // Marca como concluído
-    progress.status = "concluido".to_string();
-    progress.downloaded = total_size;
-    update_progress(url, progress.clone());
-    remove_progress(url); // Limpa progresso persistente ao concluir
+        // Marca como concluído
+        progress.status = "concluido".to_string();
+        progress.downloaded = total_size;
+        update_progress(url, progress.clone());
+        remove_progress(url); // Limpa progresso persistente ao concluir
+    }
 
     Ok(())
 }
