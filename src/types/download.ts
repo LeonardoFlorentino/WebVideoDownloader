@@ -7,4 +7,5 @@ export interface Download {
   status: string;
   canceled: boolean;
   playlist?: string; // nome da playlist ou "" se não houver
+  total?: number; // total em bytes, opcional
 }

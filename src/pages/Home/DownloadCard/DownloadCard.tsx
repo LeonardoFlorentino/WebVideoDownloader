@@ -1,6 +1,6 @@
 import { ClipLoader } from "react-spinners";
 import React from "react";
-import { FiTrash2, FiEdit2, FiPause } from "react-icons/fi";
+import { FiTrash2, FiPause } from "react-icons/fi";
 import {
   CardContainer,
   CardFileInfo,
@@ -50,27 +50,12 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
               ? "Concluído"
               : download.status === "baixando"
                 ? "Baixando..."
-                : download.status === "erro"
-                  ? "Erro"
-                  : "Pendente"}
+                : download.status === "pausado"
+                  ? "Pausado"
+                  : download.status === "erro"
+                    ? "Erro"
+                    : "Pendente"}
           </CardStatus>
-          <button
-            type="button"
-            title="Editar"
-            style={{
-              background: "none",
-              border: "none",
-              color: "#6c63ff",
-              marginLeft: 8,
-              cursor: "pointer",
-              fontSize: 18,
-              display: "flex",
-              alignItems: "center",
-            }}
-            disabled={download.status === "baixando"}
-          >
-            <FiEdit2 />
-          </button>
         </CardUrlAndStatus>
       </CardTopRow>
       <CardProgressBar
@@ -80,7 +65,12 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
           <CardProgressFill
             $status={download.status}
             style={{
-              width: `${download.status === "concluído" ? 100 : download.progress}%`,
+              width:
+                download.status === "concluído"
+                  ? "100%"
+                  : download.total && download.total > 0
+                    ? `${Math.min((download.progress / download.total) * 100, 100)}%`
+                    : `${download.progress ? Math.min(download.progress, 100) : 0}%`,
               height: 24,
               borderRadius: 6,
               position: "absolute",
@@ -110,7 +100,13 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         >
           {download.status === "concluído"
             ? "100.0%"
-            : `${typeof download.progress === "number" ? download.progress.toFixed(1) : 0}%`}
+            : download.status === "pausado"
+              ? download.total && download.total > 0
+                ? `${Math.min((download.progress / download.total) * 100, 100).toFixed(1)}% (Pausado)`
+                : `${download.progress ? Math.min(download.progress, 100).toFixed(1) : 0}% (Pausado)`
+              : download.total && download.total > 0
+                ? `${Math.min((download.progress / download.total) * 100, 100).toFixed(1)}%`
+                : `${download.progress ? Math.min(download.progress, 100).toFixed(1) : 0}%`}
         </span>
       </CardProgressBar>
       <CardActions>
@@ -162,19 +158,14 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
                   display: "flex",
                   alignItems: "center",
                   marginRight: 6,
-                  gap: 4,
                 }}
               >
-                <ClipLoader color="#fff" size={12} speedMultiplier={1.1} />
+                <ClipLoader size={18} color="#fff" />
               </span>
             ) : (
-              <FiPause size={15} style={{ verticalAlign: "middle" }} />
+              <FiPause size={18} style={{ marginRight: 6 }} />
             )}
-            <span
-              style={{ lineHeight: 1, display: "flex", alignItems: "center" }}
-            >
-              {pausando ? "Pausando..." : "Pausar"}
-            </span>
+            Pausar
           </PauseButton>
         )}
         {download.status === "pausado" && (
@@ -201,7 +192,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
               minWidth: 90,
             }}
           >
-            Continuar download
+            Continuar
           </button>
         )}
         {/* Botão abrir pasta */}
@@ -239,4 +230,5 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
     </CardContainer>
   );
 };
+
 export default DownloadCard;

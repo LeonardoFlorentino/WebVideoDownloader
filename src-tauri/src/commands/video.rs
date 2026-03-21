@@ -1,9 +1,15 @@
 #[tauri::command]
 pub fn pausar_download(url: String) {
+    println!("[PAUSE COMMAND] INICIADO para URL: {}", url);
     use crate::backend::download_progress::{get_progress, update_progress};
+    println!("[PAUSE COMMAND] Recebido pedido de pausa para URL: {}", url);
     if let Some(mut prog) = get_progress(&url) {
+        println!("[PAUSE COMMAND] Progresso encontrado, status atual: {}", prog.status);
         prog.status = "pausado".to_string();
         update_progress(&url, prog);
+        println!("[PAUSE COMMAND] Status atualizado para 'pausado' para URL: {}", url);
+    } else {
+        println!("[PAUSE COMMAND] Nenhum progresso encontrado para URL: {}", url);
     }
 }
 use tauri::Emitter;

@@ -1,118 +1,221 @@
 use reqwest::header::{RANGE, CONTENT_LENGTH};
-use crate::backend::download_progress::{DownloadProgress, update_progress, get_progress, remove_progress};
+use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+use std::thread;
+use crate::backend::download_progress::{DownloadProgress, update_progress, remove_progress};
 use std::fs::OpenOptions;
-use std::io::{Seek, SeekFrom, Write, Read};
+use std::io::{Seek, SeekFrom, Write};
+use tokio::runtime::Runtime;
 // use std::path::PathBuf;
 
 pub fn baixar_video_emit(window: Option<&Window>, url: &str, filename: &str) -> Result<(), String> {
-    let client = reqwest::blocking::Client::builder()
-        .user_agent("Mozilla/5.0")
-        .build()
-        .map_err(|e| format!("Erro ao criar client: {}", e))?;
-
-    // Garante que o nome termina exatamente em .mp4, cortando qualquer coisa após .mp4
-    let ext = if let Some(idx) = filename.find(".mp4") {
-        let end = idx + 4;
-        filename[..end].to_string()
-    } else {
-        format!("{}.mp4", filename)
-    };
-
-    let mut path = crate::backend::filesystem::get_project_root();
-    path.push("Vídeos baixados");
-    std::fs::create_dir_all(&path).map_err(|e| format!("Erro ao criar pasta: {}", e))?;
-    path.push(&ext);
-
-    // Verifica tamanho já baixado
-    let mut downloaded: u64 = 0;
-    if path.exists() {
-        downloaded = std::fs::metadata(&path).map_err(|e| format!("Erro ao ler arquivo parcial: {}", e))?.len();
-    }
-
-    // Faz requisição com Range para obter tamanho total
-    let mut req = client.get(url);
-    if downloaded > 0 {
-        req = req.header(RANGE, format!("bytes={}-", downloaded));
-    }
-    let resp = req.send().map_err(|e| format!("Erro ao baixar: {}", e))?;
-    if !resp.status().is_success() && resp.status().as_u16() != 206 {
-        return Err(format!("HTTP {}: {}", resp.status().as_u16(), resp.status()));
-    }
-
-    // Tamanho total esperado
-    let total_size = if let Some(len) = resp.headers().get(CONTENT_LENGTH) {
-        len.to_str().unwrap_or("0").parse::<u64>().unwrap_or(0) + downloaded
-    } else {
-        downloaded
-    };
-
-    // Atualiza progresso inicial
-    let mut progress = DownloadProgress {
-        url: url.to_string(),
-        filename: ext.clone(),
-        total_size,
-        downloaded,
-        status: "baixando".to_string(),
-    };
-    update_progress(url, progress.clone());
-
-    // Abre arquivo para append
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)
-        .map_err(|e| format!("Erro ao abrir arquivo: {}", e))?;
-
-    // Garante que o ponteiro está no fim
-    file.seek(SeekFrom::Start(downloaded)).map_err(|e| format!("Erro ao posicionar arquivo: {}", e))?;
-
-    // Baixa em chunks
-    let mut response = client.get(url)
-        .header(RANGE, format!("bytes={}-", downloaded))
-        .send().map_err(|e| format!("Erro ao baixar: {}", e))?;
-    let mut current = downloaded;
-    let mut buffer = [0u8; 8192];
-    let completed;
-    loop {
-        let n = response.read(&mut buffer).map_err(|e| format!("Erro ao ler chunk: {}", e))?;
-        if n == 0 {
-            // Chegou ao fim do arquivo normalmente
-            completed = true;
-            break;
-        }
-        file.write_all(&buffer[..n]).map_err(|e| format!("Erro ao salvar: {}", e))?;
-        current += n as u64;
-        // Atualiza progresso persistente
-        progress.downloaded = current;
-        progress.status = "baixando".to_string();
-        update_progress(url, progress.clone());
-        let percent = if total_size > 0 {
-            (current as f64 / total_size as f64) * 100.0
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
+        println!("[DOWNLOAD ENTRY] baixar_video_emit chamada para URL: {} em {}", url, now);
+    let should_stop = Arc::new(AtomicBool::new(false));
+    let url_string = url.to_string();
+    // Ao iniciar novo download, só defina status 'baixando' se NÃO estiver pausado
+    if let Some(mut prog) = crate::backend::download_progress::get_progress(&url_string) {
+        println!("[DOWNLOAD INIT] Status inicial para {}: {}", url_string, prog.status);
+        if prog.status == "pausado" {
+            println!("[DOWNLOAD INIT] Status já está 'pausado' para {}, não sobrescrevendo.", url_string);
+            return Ok(()); // Não inicia o download se já estiver pausado
         } else {
-            0.0
-        };
-        if let Some(w) = window {
-            let _ = w.emit("download_progress", serde_json::json!({ "url": url, "progress": percent }));
+            prog.status = "baixando".to_string();
+            crate::backend::download_progress::update_progress(&url_string, prog);
+            println!("[DOWNLOAD INIT] Status setado para 'baixando' para {}", url_string);
         }
-        // Checa se o status foi alterado para "pausado" externamente
-        if let Some(latest) = get_progress(url) {
+    } else {
+        println!("[DOWNLOAD INIT] Nenhum progresso anterior encontrado para {}", url_string);
+    }
+    let should_stop_clone = should_stop.clone();
+    // Thread para monitorar status de pausa
+    thread::spawn(move || {
+        use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
+        static MONITOR_COUNTER: once_cell::sync::Lazy<AtomicUsize> = once_cell::sync::Lazy::new(|| AtomicUsize::new(0));
+        let mut last_status = String::new();
+        loop {
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            let count = MONITOR_COUNTER.fetch_add(1, AtomicOrdering::SeqCst);
+            if let Some(prog) = crate::backend::download_progress::get_progress(&url_string) {
+                if prog.status != last_status {
+                    println!("[PAUSE MONITOR] status for {}: {}", url_string, prog.status);
+                    last_status = prog.status.clone();
+                } else if count % 10 == 0 {
+                    println!("[PAUSE MONITOR] status for {}: {} (periodic)", url_string, prog.status);
+                }
+                if prog.status == "pausado" {
+                    println!("[PAUSE MONITOR] Detected pause for {}!", url_string);
+                    should_stop_clone.store(true, Ordering::SeqCst);
+                    break;
+                }
+            } else if count % 10 == 0 {
+                println!("[PAUSE MONITOR] No progress found for {} (periodic)", url_string);
+            }
+        }
+    });
+
+    // Cria runtime tokio local para rodar async
+    let rt = Runtime::new().map_err(|e| format!("Erro ao criar runtime: {}", e))?;
+    rt.block_on(async {
+        let client = reqwest::Client::builder()
+            .user_agent("Mozilla/5.0")
+            .build()
+            .map_err(|e| format!("Erro ao criar client: {}", e))?;
+
+        // Garante que o nome termina exatamente em .mp4, cortando qualquer coisa após .mp4
+        let ext = if let Some(idx) = filename.find(".mp4") {
+            let end = idx + 4;
+            filename[..end].to_string()
+        } else {
+            format!("{}.mp4", filename)
+        };
+
+        let mut path = crate::backend::filesystem::get_project_root();
+        path.push("Vídeos baixados");
+        std::fs::create_dir_all(&path).map_err(|e| format!("Erro ao criar pasta: {}", e))?;
+        path.push(&ext);
+
+        // Verifica tamanho já baixado
+        let mut downloaded: u64 = 0;
+        if path.exists() {
+            downloaded = std::fs::metadata(&path).map_err(|e| format!("Erro ao ler arquivo parcial: {}", e))?.len();
+        }
+
+        // Faz requisição com Range para obter tamanho total
+        let mut req = client.get(url);
+        if downloaded > 0 {
+            req = req.header(RANGE, format!("bytes={}-", downloaded));
+        }
+        let resp = req.send().await.map_err(|e| format!("Erro ao baixar: {}", e))?;
+        if !resp.status().is_success() && resp.status().as_u16() != 206 {
+            return Err(format!("HTTP {}: {}", resp.status().as_u16(), resp.status()));
+        }
+
+        // Tamanho total esperado
+        let total_size = if let Some(len) = resp.headers().get(CONTENT_LENGTH) {
+            len.to_str().unwrap_or("0").parse::<u64>().unwrap_or(0) + downloaded
+        } else {
+            downloaded
+        };
+
+        // Sempre recarrega progresso do disco antes de inicializar progress
+        let mut progress = if let Some(mut latest) = crate::backend::download_progress::get_progress(url) {
             if latest.status == "pausado" {
-                println!("[DEBUG] Download pausado detectado para URL: {}", url);
+                println!("[DOWNLOAD] Progresso já está pausado ao iniciar, abortando.");
+                return Ok(());
+            }
+            latest.filename = ext.clone();
+            latest.total_size = total_size;
+            latest.downloaded = downloaded;
+            latest.status = "baixando".to_string();
+            latest
+        } else {
+            DownloadProgress {
+                url: url.to_string(),
+                filename: ext.clone(),
+                total_size,
+                downloaded,
+                status: "baixando".to_string(),
+            }
+        };
+        println!("[DOWNLOAD] Atualizando progresso para status: {} ({} bytes)", progress.status, progress.downloaded);
+        update_progress(url, progress.clone());
+
+        // Abre arquivo para append
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .map_err(|e| format!("Erro ao abrir arquivo: {}", e))?;
+
+        // Garante que o ponteiro está no fim
+        file.seek(SeekFrom::Start(downloaded)).map_err(|e| format!("Erro ao posicionar arquivo: {}", e))?;
+
+        // Baixa em chunks
+        let mut stream = resp.bytes_stream();
+        let mut current = downloaded;
+        use futures_util::StreamExt;
+        use tokio::time::{timeout, Duration};
+        // let mut completed = false;
+        loop {
+            // Sempre recarrega progresso do disco antes de qualquer update
+            if should_stop.load(Ordering::SeqCst) {
+                println!("[DOWNLOAD] Pausa detectada para {}! Interrompendo download.", url);
                 progress.status = "pausado".to_string();
                 update_progress(url, progress.clone());
                 if let Some(w) = window {
-                    println!("[DEBUG] Emitindo evento download_paused para URL: {}", url);
+                    println!("[DOWNLOAD] Emitindo evento download_paused para {}", url);
                     let _ = w.emit("download_paused", serde_json::json!({ "url": url }));
-                } else {
-                    println!("[DEBUG] Window é None, não foi possível emitir evento.");
                 }
-                return Ok(()); // Sai do loop e retorna, download pode ser retomado depois
+                return Ok(());
+            }
+            // Recarrega status do progresso do disco ANTES de atualizar progresso
+            if let Some(latest) = crate::backend::download_progress::get_progress(url) {
+                if latest.status == "pausado" {
+                    println!("[DOWNLOAD] Pausa detectada via status persistido para {}! Interrompendo download.", url);
+                    // NÃO sobrescreve status, apenas retorna
+                    if let Some(w) = window {
+                        println!("[DOWNLOAD] Emitindo evento download_paused para {} (persist)", url);
+                        let _ = w.emit("download_paused", serde_json::json!({ "url": url }));
+                    }
+                    return Ok(());
+                }
+            }
+            let next_chunk = timeout(Duration::from_secs(2), stream.next()).await;
+            match next_chunk {
+                Ok(Some(chunk_result)) => {
+                    let chunk = chunk_result.map_err(|e| format!("Erro ao ler chunk: {}", e))?;
+                    if chunk.is_empty() {
+                        println!("[DOWNLOAD] Fim do stream para {}", url);
+                        break;
+                    }
+                    // Recarrega status do progresso do disco ANTES de atualizar progresso
+                    if let Some(latest) = crate::backend::download_progress::get_progress(url) {
+                        if latest.status == "pausado" {
+                            println!("[DOWNLOAD] Detected 'pausado' antes de update_progress, interrompendo.");
+                            // NÃO sobrescreve status, apenas retorna
+                            if let Some(w) = window {
+                                println!("[DOWNLOAD] Emitindo evento download_paused para {} (persist2)", url);
+                                let _ = w.emit("download_paused", serde_json::json!({ "url": url }));
+                            }
+                            return Ok(());
+                        }
+                    }
+                    file.write_all(&chunk).map_err(|e| format!("Erro ao salvar: {}", e))?;
+                    current += chunk.len() as u64;
+                    progress.downloaded = current;
+                    update_progress(url, progress.clone());
+                    let percent = if total_size > 0 {
+                        (current as f64 / total_size as f64) * 100.0
+                    } else {
+                        0.0
+                    };
+                    if let Some(w) = window {
+                        let _ = w.emit("download_progress", serde_json::json!({ "url": url, "progress": percent }));
+                    }
+                }
+                Ok(None) => {
+                    println!("[DOWNLOAD] Fim do stream para {} (Ok(None))", url);
+                    break;
+                }
+                Err(_elapsed) => {
+                    println!("[DOWNLOAD] Timeout aguardando chunk para {}", url);
+                    if should_stop.load(Ordering::SeqCst) {
+                        println!("[DOWNLOAD] Pausa detectada durante timeout para {}! Interrompendo download.", url);
+                        progress.status = "pausado".to_string();
+                        update_progress(url, progress.clone());
+                        if let Some(w) = window {
+                            println!("[DOWNLOAD] Emitindo evento download_paused para {} (timeout)", url);
+                            let _ = w.emit("download_paused", serde_json::json!({ "url": url }));
+                        }
+                        return Ok(());
+                    }
+                    continue;
+                }
             }
         }
-    }
 
-    if completed {
-        // Verifica se arquivo está vazio
+        // Verifica se arquivo está vazio e finaliza download
         let meta = std::fs::metadata(&path).map_err(|e| format!("Erro ao finalizar arquivo: {}", e))?;
         if meta.len() == 0 {
             progress.status = "erro".to_string();
@@ -121,13 +224,15 @@ pub fn baixar_video_emit(window: Option<&Window>, url: &str, filename: &str) -> 
         }
 
         // Marca como concluído
-        progress.status = "concluido".to_string();
-        progress.downloaded = total_size;
-        update_progress(url, progress.clone());
-        remove_progress(url); // Limpa progresso persistente ao concluir
-    }
+        if progress.status != "pausado" && progress.status != "erro" {
+            progress.status = "concluido".to_string();
+            progress.downloaded = total_size;
+            update_progress(url, progress.clone());
+            remove_progress(url); // Limpa progresso persistente ao concluir
+        }
 
-    Ok(())
+        Ok(())
+    })
 }
 use tauri::Emitter;
 use tauri::Window;

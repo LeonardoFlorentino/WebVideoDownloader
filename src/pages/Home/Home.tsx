@@ -22,14 +22,10 @@ import { useEffect, useRef } from "react";
 import { useDownloads } from "../../context/useDownloads";
 import type { Download } from "@/types/download";
 import { useNavigate } from "react-router-dom";
-import {
-  getMainUrls,
-  getTitleFromUrl,
-  updateMainUrlTitle,
-  removeMainUrl,
-} from "../../service/downloadsService";
+import { getMainUrls, removeMainUrl } from "../../service/downloadsService";
 import { baixarVideoTauri } from "../../service/baixarVideo";
 import { pausarDownloadTauri } from "../../service/pausarDownload";
+import { resumeDownloadTauri } from "../../service/resumeDownload";
 import { listen } from "@tauri-apps/api/event";
 import { listDownloadedVideos } from "../../lib/listVideos";
 
@@ -64,33 +60,62 @@ function Home({ username }: HomeProps) {
           // Verifica vídeos já baixados
           const baixados = await listDownloadedVideos();
           setDownloads(
-            (urls as { url: string; filename: string; status?: string }[]).map(
-              (item, idx) => {
-                const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
-                const baixado = baixados.find((b) => {
-                  const nomeSemExtNorm = nomeSemExt
-                    .toLowerCase()
-                    .normalize("NFD")
-                    .replace(/[^\w\s]/g, "");
-                  const baixadoSemExtNorm = b.name
-                    .replace(/\.[^/.]+$/, "")
-                    .toLowerCase()
-                    .normalize("NFD")
-                    .replace(/[^\w\s]/g, "");
-                  return baixadoSemExtNorm === nomeSemExtNorm;
-                });
-                return {
-                  id: Date.now() + idx,
-                  url: item.url,
-                  filename: item.filename || `video_${idx + 1}`,
-                  ext: "mp4",
-                  progress: baixado ? 100 : 0,
-                  status: item.status || (baixado ? "concluído" : "pendente"),
-                  canceled: false,
-                  playlist: "", // sempre avulso na Home
-                };
-              },
-            ),
+            (
+              urls as {
+                url: string;
+                filename: string;
+                status?: string;
+                progress?: number;
+              }[]
+            ).map((item, idx) => {
+              const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
+              const baixado = baixados.find((b) => {
+                const nomeSemExtNorm = nomeSemExt
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[^\w\s]/g, "");
+                const baixadoSemExtNorm = b.name
+                  .replace(/\.[^/.]+$/, "")
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[^\w\s]/g, "");
+                return baixadoSemExtNorm === nomeSemExtNorm;
+              });
+              let status = item.status;
+              let progress =
+                typeof item.progress === "number" ? item.progress : 0;
+              if (!status) {
+                if (baixado) {
+                  status = "concluído";
+                  progress = 100;
+                } else {
+                  status = "pendente";
+                  progress = 0;
+                }
+              } else if (status === "concluído" || status === "concluido") {
+                progress = 100;
+                status = "concluído";
+              } else if (
+                status === "pausado" ||
+                status === "baixando" ||
+                status === "erro" ||
+                status === "pendente"
+              ) {
+                // Se backend fornecer progresso, use, senão 0
+                progress =
+                  typeof item.progress === "number" ? item.progress : 0;
+              }
+              return {
+                id: Date.now() + idx,
+                url: item.url,
+                filename: item.filename || `video_${idx + 1}`,
+                ext: "mp4",
+                progress,
+                status,
+                canceled: false,
+                playlist: "", // sempre avulso na Home
+              };
+            }),
           );
         } catch (err) {
           console.error("Erro ao buscar urls do backend:", err);
@@ -110,24 +135,48 @@ function Home({ username }: HomeProps) {
     let unlistenProgress: (() => void) | undefined;
     let unlistenFinished: (() => void) | undefined;
     let unlistenPaused: (() => void) | undefined;
+    let lastProgressLog = 0;
     (async () => {
-      unlistenProgress = await listen<{ url: string; progress: number }>(
-        "download_progress",
-        async (event) => {
-          const { url, progress } = event.payload;
-          setDownloads((ds) =>
-            ds.map((d) =>
-              d.url === url
-                ? {
-                    ...d,
-                    progress: progress,
-                    status: "baixando",
-                  }
-                : d,
-            ),
-          );
-        },
-      );
+      unlistenProgress = await listen<{
+        id: string;
+        progress: number;
+        total: number;
+        status: string;
+      }>("download-progress", (event) => {
+        const { id, progress, total, status } = event.payload;
+        const now = Date.now();
+        setDownloads((ds) =>
+          ds.map((d) => {
+            if (String(d.id) === id) {
+              if (now - lastProgressLog > 2000) {
+                console.log(
+                  "[EVENTO PROGRESSO]",
+                  id,
+                  "progress:",
+                  progress,
+                  "total:",
+                  total,
+                  "status atual:",
+                  d.status,
+                );
+                lastProgressLog = now;
+              }
+              return {
+                ...d,
+                progress,
+                total,
+                status:
+                  status === "paused"
+                    ? "pausado"
+                    : status === "completed"
+                      ? "concluído"
+                      : "baixando",
+              };
+            }
+            return d;
+          }),
+        );
+      });
       unlistenFinished = await listen<{
         url: string;
         filename: string;
@@ -136,16 +185,27 @@ function Home({ username }: HomeProps) {
       }>("download_finished", async (event) => {
         const { url, status, error } = event.payload;
         setDownloads((ds) =>
-          ds.map((d) =>
-            d.url === url
-              ? {
-                  ...d,
-                  status: status === "concluido" ? "concluído" : status,
-                  progress: status === "concluido" ? 100 : d.progress,
-                  error: error || undefined,
-                }
-              : d,
-          ),
+          ds.map((d) => {
+            if (d.url !== url) return d;
+            // Se o status atual for 'pausado', não sobrescreva para 'concluído'
+            if (d.status === "pausado") {
+              console.log(
+                "[EVENTO FINISHED]",
+                url,
+                "status recebido:",
+                status,
+                "status mantido como pausado",
+              );
+              return { ...d, error: error || undefined };
+            }
+            console.log("[EVENTO FINISHED]", url, "status recebido:", status);
+            return {
+              ...d,
+              status: status === "concluido" ? "concluído" : status,
+              progress: status === "concluido" ? 100 : d.progress,
+              error: error || undefined,
+            };
+          }),
         );
       });
       unlistenPaused = await listen<{ url: string }>(
@@ -153,7 +213,7 @@ function Home({ username }: HomeProps) {
         (event) => {
           const { url } = event.payload;
           setDownloads((ds) =>
-            ds.map((d) => (d.url === url ? { ...d, status: "pendente" } : d)),
+            ds.map((d) => (d.url === url ? { ...d, status: "pausado" } : d)),
           );
           setPausando((prev) => ({ ...prev, [url]: false }));
         },
@@ -222,21 +282,22 @@ function Home({ username }: HomeProps) {
             x.id === d.id ? { ...x, status: "baixando" } : x,
           ),
         );
-        // Dispara o download sem await
-        baixarVideoTauri(undefined, username, d.url, d.filename, d.id).catch(
-          (err) => {
-            setDownloads((ds: Download[]) =>
-              ds.map((x: Download) =>
-                x.id === d.id ? { ...x, status: "erro", progress: 0 } : x,
-              ),
-            );
-            if (typeof err === "string") {
-              toast.error(err);
-            } else {
-              toast.error(`Erro ao baixar: ${d.filename}`);
-            }
-          },
-        );
+        // Garante extensão .mp4
+        const filename = d.filename.endsWith(".mp4")
+          ? d.filename
+          : `${d.filename}.mp4`;
+        baixarVideoTauri(
+          String(d.id),
+          d.url,
+          `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${filename}`,
+        ).catch((err) => {
+          setDownloads((ds: Download[]) =>
+            ds.map((x: Download) =>
+              x.id === d.id ? { ...x, status: "erro", progress: 0 } : x,
+            ),
+          );
+          toast.error(`Erro ao baixar: ${filename}\n${err}`);
+        });
       }
     });
     setDownloadingAll(false);
@@ -246,10 +307,18 @@ function Home({ username }: HomeProps) {
   const handleDownload = async (id: number, action?: "pause" | "resume") => {
     const d = downloads.find((x: Download) => x.id === id);
     if (!d) return;
+    const filename = d.filename.endsWith(".mp4")
+      ? d.filename
+      : `${d.filename}.mp4`;
+    const savePath = `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${filename}`;
     if (action === "pause") {
-      if (d) {
-        setPausando((prev) => ({ ...prev, [d.url]: true }));
-        await pausarDownloadTauri(d.url);
+      setPausando((prev) => ({ ...prev, [d.url]: true }));
+      try {
+        await pausarDownloadTauri(String(d.id));
+        setPausando((prev) => ({ ...prev, [d.url]: false }));
+      } catch {
+        setPausando((prev) => ({ ...prev, [d.url]: false }));
+        toast.error("Erro ao pausar download");
       }
       return;
     }
@@ -259,64 +328,32 @@ function Home({ username }: HomeProps) {
           x.id === id ? { ...x, status: "baixando" } : x,
         ),
       );
-      // Retoma o download (chama baixarVideoTauri novamente)
-      baixarVideoTauri(undefined, username, d.url, d.filename, d.id).catch(
-        (err) => {
-          setDownloads((ds: Download[]) =>
-            ds.map((x: Download) =>
-              x.id === id ? { ...x, status: "erro", progress: 0 } : x,
-            ),
-          );
-          if (typeof err === "string") {
-            toast.error(err);
-          } else {
-            toast.error(`Erro ao baixar: ${d.filename}`);
-          }
-        },
-      );
-      return;
-    }
-    // Download normal
-    let filenameToUse = d.filename;
-    if (
-      !filenameToUse ||
-      filenameToUse.trim() === "" ||
-      filenameToUse.startsWith("video_")
-    ) {
-      try {
-        const title = await getTitleFromUrl(d.url);
-        filenameToUse = title;
-        if (username) {
-          await updateMainUrlTitle(username, d.url, d.url, title);
-        }
-        setDownloads((ds: Download[]) =>
-          ds.map((x: Download) =>
-            x.id === id ? { ...x, filename: title } : x,
-          ),
-        );
-      } catch {
-        console.warn(
-          "Não foi possível obter o título do HTML, usando nome genérico.",
-        );
-      }
-    }
-    setDownloads((ds: Download[]) =>
-      ds.map((x: Download) => (x.id === id ? { ...x, status: "baixando" } : x)),
-    );
-    baixarVideoTauri(undefined, username, d.url, d.filename, d.id).catch(
-      (err) => {
+      resumeDownloadTauri(String(d.id), d.url, savePath).catch(() => {
         setDownloads((ds: Download[]) =>
           ds.map((x: Download) =>
             x.id === id ? { ...x, status: "erro", progress: 0 } : x,
           ),
         );
-        if (typeof err === "string") {
-          toast.error(err);
-        } else {
-          toast.error(`Erro ao baixar: ${filenameToUse}`);
-        }
-      },
-    );
+        toast.error("Erro ao retomar download");
+      });
+      return;
+    }
+    // Download normal
+    try {
+      await baixarVideoTauri(String(d.id), d.url, savePath);
+      setDownloads((ds: Download[]) =>
+        ds.map((x: Download) =>
+          x.id === id ? { ...x, status: "baixando" } : x,
+        ),
+      );
+    } catch (err) {
+      setDownloads((ds: Download[]) =>
+        ds.map((x: Download) =>
+          x.id === id ? { ...x, status: "erro", progress: 0 } : x,
+        ),
+      );
+      toast.error(`Erro ao baixar vídeo: ${err}`);
+    }
   };
 
   const handleLogout = () => {
@@ -443,9 +480,7 @@ function Home({ username }: HomeProps) {
             download={d}
             onDownload={handleDownload}
             onRemove={handleRemove}
-            onOpenFolder={() =>
-              openDownloadFolder(d.playlist ? d.playlist : "")
-            }
+            onOpenFolder={() => openDownloadFolder(d.filename)}
             pausando={!!pausando[d.url]}
           />
         ))}
@@ -453,5 +488,4 @@ function Home({ username }: HomeProps) {
     </Container>
   );
 }
-
 export default Home;
