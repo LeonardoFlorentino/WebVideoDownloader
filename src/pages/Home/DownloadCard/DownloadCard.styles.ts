@@ -1,5 +1,21 @@
 import styled from "styled-components";
 
+export const PauseButton = styled.button`
+  background: #e53935;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 4px 0 #0002;
+  transition: background 0.2s;
+  outline: none;
+  &:hover {
+    background: #b71c1c;
+  }
+`;
+
 export const CardTopRow = styled.div`
   display: flex;
   align-items: center;

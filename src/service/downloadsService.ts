@@ -1,3 +1,6 @@
+export async function removeMainUrl(username: string, url: string) {
+  return invoke("remove_main_url_tauri", { username, url });
+}
 export async function getTitleFromUrl(url: string): Promise<string> {
   return invoke("get_title_from_url", { url });
 }

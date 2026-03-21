@@ -1,53 +1,131 @@
+use reqwest::header::{RANGE, CONTENT_LENGTH};
+use crate::backend::download_progress::{DownloadProgress, update_progress, get_progress, remove_progress};
+use std::fs::OpenOptions;
+use std::io::{Seek, SeekFrom, Write, Read};
+// use std::path::PathBuf;
+
+pub fn baixar_video_emit(window: Option<&Window>, url: &str, filename: &str) -> Result<(), String> {
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("Mozilla/5.0")
+        .build()
+        .map_err(|e| format!("Erro ao criar client: {}", e))?;
+
+    // Garante que o nome termina exatamente em .mp4, cortando qualquer coisa após .mp4
+    let ext = if let Some(idx) = filename.find(".mp4") {
+        let end = idx + 4;
+        filename[..end].to_string()
+    } else {
+        format!("{}.mp4", filename)
+    };
+
+    let mut path = crate::backend::filesystem::get_project_root();
+    path.push("Vídeos baixados");
+    std::fs::create_dir_all(&path).map_err(|e| format!("Erro ao criar pasta: {}", e))?;
+    path.push(&ext);
+
+    // Verifica tamanho já baixado
+    let mut downloaded: u64 = 0;
+    if path.exists() {
+        downloaded = std::fs::metadata(&path).map_err(|e| format!("Erro ao ler arquivo parcial: {}", e))?.len();
+    }
+
+    // Faz requisição com Range para obter tamanho total
+    let mut req = client.get(url);
+    if downloaded > 0 {
+        req = req.header(RANGE, format!("bytes={}-", downloaded));
+    }
+    let resp = req.send().map_err(|e| format!("Erro ao baixar: {}", e))?;
+    if !resp.status().is_success() && resp.status().as_u16() != 206 {
+        return Err(format!("HTTP {}: {}", resp.status().as_u16(), resp.status()));
+    }
+
+    // Tamanho total esperado
+    let total_size = if let Some(len) = resp.headers().get(CONTENT_LENGTH) {
+        len.to_str().unwrap_or("0").parse::<u64>().unwrap_or(0) + downloaded
+    } else {
+        downloaded
+    };
+
+    // Atualiza progresso inicial
+    let mut progress = DownloadProgress {
+        url: url.to_string(),
+        filename: ext.clone(),
+        total_size,
+        downloaded,
+        status: "baixando".to_string(),
+    };
+    update_progress(url, progress.clone());
+
+    // Abre arquivo para append
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| format!("Erro ao abrir arquivo: {}", e))?;
+
+    // Garante que o ponteiro está no fim
+    file.seek(SeekFrom::Start(downloaded)).map_err(|e| format!("Erro ao posicionar arquivo: {}", e))?;
+
+    // Baixa em chunks
+    let mut response = client.get(url)
+        .header(RANGE, format!("bytes={}-", downloaded))
+        .send().map_err(|e| format!("Erro ao baixar: {}", e))?;
+    let mut current = downloaded;
+    let mut buffer = [0u8; 8192];
+    loop {
+        let n = response.read(&mut buffer).map_err(|e| format!("Erro ao ler chunk: {}", e))?;
+        if n == 0 { break; }
+        file.write_all(&buffer[..n]).map_err(|e| format!("Erro ao salvar: {}", e))?;
+        current += n as u64;
+        // Atualiza progresso persistente
+        progress.downloaded = current;
+        progress.status = "baixando".to_string();
+        update_progress(url, progress.clone());
+        let percent = if total_size > 0 {
+            (current as f64 / total_size as f64) * 100.0
+        } else {
+            0.0
+        };
+        if let Some(w) = window {
+            let _ = w.emit("download_progress", serde_json::json!({ "url": url, "progress": percent }));
+        }
+        // Checa se o status foi alterado para "pausado" externamente
+        if let Some(latest) = get_progress(url) {
+            if latest.status == "pausado" {
+                println!("[DEBUG] Download pausado detectado para URL: {}", url);
+                progress.status = "pausado".to_string();
+                update_progress(url, progress.clone());
+                if let Some(w) = window {
+                    println!("[DEBUG] Emitindo evento download_paused para URL: {}", url);
+                    let _ = w.emit("download_paused", serde_json::json!({ "url": url }));
+                } else {
+                    println!("[DEBUG] Window é None, não foi possível emitir evento.");
+                }
+                return Ok(()); // Sai do loop e retorna, download pode ser retomado depois
+            }
+        }
+    }
+
+    // Verifica se arquivo está vazio
+    let meta = std::fs::metadata(&path).map_err(|e| format!("Erro ao finalizar arquivo: {}", e))?;
+    if meta.len() == 0 {
+        progress.status = "erro".to_string();
+        update_progress(url, progress.clone());
+        return Err("Arquivo criado mas está vazio".to_string());
+    }
+
+    // Marca como concluído
+    progress.status = "concluido".to_string();
+    progress.downloaded = total_size;
+    update_progress(url, progress.clone());
+    remove_progress(url); // Limpa progresso persistente ao concluir
+
+    Ok(())
+}
 use tauri::Emitter;
 use tauri::Window;
 use regex::Regex;
 
-pub fn baixar_video(url: &str, filename: &str) -> Result<(), String> {
-    let response = reqwest::blocking::get(url).map_err(|e| format!("Erro ao baixar: {}", e))?;
-    if !response.status().is_success() {
-        return Err(format!("HTTP {}: {}", response.status().as_u16(), response.status()));
-    }
-    let _total_size = response.content_length().unwrap_or(0);
-    let ext = filename;
-    let mut path = crate::backend::filesystem::get_project_root();
-    path.push("Vídeos baixados");
-    if let Some(content_type) = response.headers().get("content-type") {
-        let ct = content_type.to_str().unwrap_or("");
-        if !ct.starts_with("video/") && !ct.contains("octet-stream") {
-            return Err(format!("O link não retorna um vídeo válido. Content-Type: {}", ct));
-        }
-    }
-    if let Err(e) = std::fs::create_dir_all(&path) {
-        return Err(format!("Erro ao criar pasta: {}", e));
-    }
-    path.push(ext);
-    let mut file = match std::fs::File::create(&path) {
-        Ok(f) => f,
-        Err(e) => {
-            return Err(format!("Erro ao criar arquivo: {}", e));
-        }
-    };
-    let bytes = match response.bytes() {
-        Ok(b) => b,
-        Err(e) => {
-            return Err(format!("Erro ao ler bytes: {}", e));
-        }
-    };
-    if let Err(e) = std::io::Write::write_all(&mut file, &bytes) {
-        return Err(format!("Erro ao salvar: {}", e));
-    }
-    match std::fs::metadata(&path) {
-        Ok(meta) => {
-            if meta.len() == 0 {
-                return Err("Arquivo criado mas está vazio".to_string());
-            }
-        }
-        Err(e) => {
-            return Err(format!("Arquivo não criado corretamente: {}", e));
-        }
-    }
-    Ok(())
-}
 
 pub fn baixar_hls_emit(window: &Window, m3u8_url: &str, filename: &str, id: Option<u64>) -> Result<(), String> {
     let client = reqwest::blocking::Client::builder()

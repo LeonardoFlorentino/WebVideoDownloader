@@ -1,3 +1,15 @@
+use crate::backend::user_service::remove_main_url;
+#[allow(dead_code)]
+#[tauri::command]
+pub fn remove_main_url_tauri(username: String, url: String) -> CommandResult<()> {
+    match remove_main_url(username, url) {
+        Ok(_) => CommandResult { ok: true, data: Some(()), error: None },
+        Err(e) => {
+            eprintln!("Erro remove_main_url: {}", e);
+            CommandResult { ok: false, data: None, error: Some(e) }
+        }
+    }
+}
 use crate::backend::user_service::{add_main_url, get_main_urls, update_main_url_title};
 use crate::CommandResult;
 

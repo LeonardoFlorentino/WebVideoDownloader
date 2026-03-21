@@ -1,7 +1,5 @@
 import React from "react";
-import { ClipLoader } from "react-spinners";
-
-import { FiTrash2, FiEdit2 } from "react-icons/fi";
+import { FiTrash2, FiEdit2, FiPause } from "react-icons/fi";
 import {
   CardContainer,
   CardFileInfo,
@@ -15,19 +13,17 @@ import {
   OpenFolderButton,
   CardTopRow,
   CardUrlAndStatus,
+  PauseButton,
 } from "./DownloadCard.styles";
 
 import type { Download } from "@/types/download";
 
 interface DownloadCardProps {
   download: Download;
-  onDownload: (id: number) => void;
+  onDownload: (id: number, action?: "pause" | "resume") => void;
   onRemove: (id: number) => void;
   onOpenFolder: () => void;
-  onEdit?: (
-    id: number,
-    newVals: { filename: string; url: string; status?: string },
-  ) => void;
+  // onEdit removido pois não está em uso
 }
 
 const DownloadCard: React.FC<DownloadCardProps> = ({
@@ -35,9 +31,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
   onDownload,
   onRemove,
   onOpenFolder,
-  onEdit,
 }) => {
-  const handleEdit = () => {};
   return (
     <CardContainer>
       <CardTopRow>
@@ -61,7 +55,6 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
           <button
             type="button"
             title="Editar"
-            onClick={handleEdit}
             style={{
               background: "none",
               border: "none",
@@ -85,7 +78,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
           <CardProgressFill
             $status={download.status}
             style={{
-              width: `${download.progress}%`,
+              width: `${download.status === "concluído" ? 100 : download.progress}%`,
               height: 24,
               borderRadius: 6,
               position: "absolute",
@@ -113,36 +106,82 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
             textShadow: "0 1px 4px #23284d, 0 0 2px #23284d, 0 0 6px #23284d",
           }}
         >
-          {`${typeof download.progress === "number" ? download.progress : 0}%`}
+          {download.status === "concluído"
+            ? "100.0%"
+            : `${typeof download.progress === "number" ? download.progress.toFixed(1) : 0}%`}
         </span>
       </CardProgressBar>
       <CardActions>
-        <button
-          type="button"
-          title="Marcar como concluído"
-          onClick={() =>
-            onEdit &&
-            onEdit(download.id, {
-              filename: download.filename,
-              url: download.url,
-              status: "concluído",
-            })
-          }
-          disabled={download.status === "concluído"}
-          style={{
-            background: "#43a047",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: "6px 12px",
-            marginRight: 8,
-            fontWeight: 500,
-            cursor: download.status === "concluído" ? "not-allowed" : "pointer",
-            opacity: download.status === "concluído" ? 0.6 : 1,
-          }}
-        >
-          Marcar como Concluído
-        </button>
+        {/* Botão dinâmico: baixar, pausar, continuar */}
+        {download.status === "pendente" && (
+          <button
+            type="button"
+            onClick={() => onDownload(download.id)}
+            style={{
+              background: "#6c63ff",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 16px",
+              fontWeight: 500,
+              cursor: "pointer",
+              opacity: 1,
+              transition: "background 0.2s",
+              outline: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontSize: 16,
+              letterSpacing: 0.2,
+              minWidth: 90,
+            }}
+          >
+            Baixar
+          </button>
+        )}
+        {download.status === "baixando" && (
+          <PauseButton
+            type="button"
+            onClick={() => onDownload(download.id, "pause")}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <FiPause size={15} style={{ verticalAlign: "middle" }} />
+            <span
+              style={{ lineHeight: 1, display: "flex", alignItems: "center" }}
+            >
+              Pausar
+            </span>
+          </PauseButton>
+        )}
+        {download.status === "pausado" && (
+          <button
+            type="button"
+            onClick={() => onDownload(download.id, "resume")}
+            style={{
+              background: "#43a047",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 16px",
+              fontWeight: 500,
+              cursor: "pointer",
+              opacity: 1,
+              transition: "background 0.2s",
+              outline: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontSize: 16,
+              letterSpacing: 0.2,
+              minWidth: 90,
+            }}
+          >
+            Continuar download
+          </button>
+        )}
+        {/* Botão abrir pasta */}
         <OpenFolderButton
           type="button"
           onClick={onOpenFolder}
@@ -150,55 +189,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         >
           Abrir Pasta
         </OpenFolderButton>
-        <button
-          type="button"
-          onClick={() => onDownload(download.id)}
-          disabled={
-            download.status === "concluído" || download.status === "baixando"
-          }
-          style={{
-            background: "#6c63ff",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            padding: "6px 16px",
-            fontWeight: 500,
-            cursor:
-              download.status === "concluído" || download.status === "baixando"
-                ? "not-allowed"
-                : "pointer",
-            opacity:
-              download.status === "concluído" || download.status === "baixando"
-                ? 0.7
-                : 1,
-            transition: "background 0.2s",
-            outline: "none",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            fontSize: 16,
-            letterSpacing: 0.2,
-            minWidth: 90,
-          }}
-        >
-          {download.status === "baixando" ? (
-            <>
-              <span
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginRight: 6,
-                }}
-              >
-                <ClipLoader color="#fff" size={16} speedMultiplier={1.1} />
-              </span>
-              Baixando...
-            </>
-          ) : (
-            "Baixar"
-          )}
-        </button>
+        {/* Botão remover */}
         <button
           type="button"
           title="Remover da lista"
@@ -225,5 +216,4 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
     </CardContainer>
   );
 };
-
 export default DownloadCard;

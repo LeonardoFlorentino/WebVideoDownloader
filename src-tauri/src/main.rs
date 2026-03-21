@@ -3,7 +3,7 @@ mod window_utils;
 mod commands;
 use commands::auth::{cadastrar_usuario_tauri, autenticar_usuario_tauri};
 use commands::video::{baixar_video_tauri, baixar_em_cascata, listar_videos_baixados_tauri, get_title_from_url_tauri};
-use commands::user::{add_main_url_tauri, get_main_urls_tauri, update_main_url_title_tauri};
+use commands::user::{add_main_url_tauri, get_main_urls_tauri, update_main_url_title_tauri, remove_main_url_tauri};
 use commands::playlist::{salvar_playlist_tauri, marcar_playlist_baixada_tauri};
 use commands::folder::open_download_folder_tauri;
 use serde::Serialize;
@@ -35,6 +35,8 @@ fn main() {
             salvar_playlist_tauri,
             marcar_playlist_baixada_tauri,
             open_download_folder_tauri,
+            remove_main_url_tauri,
+            commands::video::pausar_download,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -44,6 +46,7 @@ mod backend {
     pub mod user;
     pub mod user_service;
     pub mod auth;
+    pub mod download_progress;
     pub mod filesystem;
     pub mod downloads;
     pub mod playlist;

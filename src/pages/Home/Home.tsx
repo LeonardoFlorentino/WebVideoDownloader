@@ -26,8 +26,10 @@ import {
   getMainUrls,
   getTitleFromUrl,
   updateMainUrlTitle,
+  removeMainUrl,
 } from "../../service/downloadsService";
 import { baixarVideoTauri } from "../../service/baixarVideo";
+import { pausarDownloadTauri } from "../../service/pausarDownload";
 import { listen } from "@tauri-apps/api/event";
 import { listDownloadedVideos } from "../../lib/listVideos";
 
@@ -102,10 +104,11 @@ function Home({ username }: HomeProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [username]);
 
-  // Listeners para progresso e finalização de download
+  // Listeners para progresso, finalização e pausa de download
   useEffect(() => {
     let unlistenProgress: (() => void) | undefined;
     let unlistenFinished: (() => void) | undefined;
+    let unlistenPaused: (() => void) | undefined;
     (async () => {
       unlistenProgress = await listen<{ url: string; progress: number }>(
         "download_progress",
@@ -116,7 +119,7 @@ function Home({ username }: HomeProps) {
               d.url === url
                 ? {
                     ...d,
-                    progress: Math.round(progress),
+                    progress: progress,
                     status: progress >= 100 ? "concluído" : "baixando",
                   }
                 : d,
@@ -144,15 +147,65 @@ function Home({ username }: HomeProps) {
           ),
         );
       });
+      unlistenPaused = await listen<{ url: string }>(
+        "download_paused",
+        (event) => {
+          const { url } = event.payload;
+          setDownloads((ds) =>
+            ds.map((d) => (d.url === url ? { ...d, status: "pendente" } : d)),
+          );
+        },
+      );
     })();
     return () => {
       if (unlistenProgress) unlistenProgress();
       if (unlistenFinished) unlistenFinished();
+      if (unlistenPaused) unlistenPaused();
     };
   }, [setDownloads]);
 
-  const handleRemove = (id: number) => {
-    setDownloads((ds: Download[]) => ds.filter((d: Download) => d.id !== id));
+  const handleRemove = async (id: number) => {
+    const d = downloads.find((d) => d.id === id);
+    if (!d || !username) return;
+    try {
+      await removeMainUrl(username, d.url);
+      // Recarrega a lista do backend após remover
+      const urls = await getMainUrls(username);
+      const baixados = await import("../../lib/listVideos").then((m) =>
+        m.listDownloadedVideos(),
+      );
+      setDownloads(
+        (urls as { url: string; filename: string; status?: string }[]).map(
+          (item, idx) => {
+            const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
+            const baixado = baixados.find((b: { name: string }) => {
+              const nomeSemExtNorm = nomeSemExt
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[^\w\s]/g, "");
+              const baixadoSemExtNorm = b.name
+                .replace(/\.[^/.]+$/, "")
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(/[^\w\s]/g, "");
+              return baixadoSemExtNorm === nomeSemExtNorm;
+            });
+            return {
+              id: Date.now() + idx,
+              url: item.url,
+              filename: item.filename || `video_${idx + 1}`,
+              ext: "mp4",
+              progress: baixado ? 100 : 0,
+              status: item.status || (baixado ? "concluído" : "pendente"),
+              canceled: false,
+            };
+          },
+        ),
+      );
+      toast.success("Vídeo removido!");
+    } catch {
+      toast.error("Erro ao remover vídeo!");
+    }
   };
 
   // Certifique-se de salvar o usuário no localStorage após login/cadastro:
@@ -164,16 +217,12 @@ function Home({ username }: HomeProps) {
       if (d.status === "pendente") {
         setDownloads((ds: Download[]) =>
           ds.map((x: Download) =>
-            x.id === d.id ? { ...x, status: "baixando", progress: 10 } : x,
+            x.id === d.id ? { ...x, status: "baixando" } : x,
           ),
         );
         // Dispara o download sem await
-        baixarVideoTauri(undefined, username, d.url, d.filename, d.id)
-          .then(() => {
-            // O progresso e status serão atualizados via evento
-            toast.success(`Download concluído: ${d.filename}`);
-          })
-          .catch((err) => {
+        baixarVideoTauri(undefined, username, d.url, d.filename, d.id).catch(
+          (err) => {
             setDownloads((ds: Download[]) =>
               ds.map((x: Download) =>
                 x.id === d.id ? { ...x, status: "erro", progress: 0 } : x,
@@ -184,16 +233,45 @@ function Home({ username }: HomeProps) {
             } else {
               toast.error(`Erro ao baixar: ${d.filename}`);
             }
-          });
+          },
+        );
       }
     });
     setDownloadingAll(false);
   };
 
-  const handleDownload = async (id: number) => {
+  // Novo handleDownload para pause/resume/stop
+  const handleDownload = async (id: number, action?: "pause" | "resume") => {
     const d = downloads.find((x: Download) => x.id === id);
     if (!d) return;
-    // Se o campo filename estiver vazio, buscar o <title> do HTML
+    if (action === "pause") {
+      if (d) await pausarDownloadTauri(d.url);
+      return;
+    }
+    if (action === "resume") {
+      setDownloads((ds: Download[]) =>
+        ds.map((x: Download) =>
+          x.id === id ? { ...x, status: "baixando" } : x,
+        ),
+      );
+      // Retoma o download (chama baixarVideoTauri novamente)
+      baixarVideoTauri(undefined, username, d.url, d.filename, d.id).catch(
+        (err) => {
+          setDownloads((ds: Download[]) =>
+            ds.map((x: Download) =>
+              x.id === id ? { ...x, status: "erro", progress: 0 } : x,
+            ),
+          );
+          if (typeof err === "string") {
+            toast.error(err);
+          } else {
+            toast.error(`Erro ao baixar: ${d.filename}`);
+          }
+        },
+      );
+      return;
+    }
+    // Download normal
     let filenameToUse = d.filename;
     if (
       !filenameToUse ||
@@ -203,35 +281,25 @@ function Home({ username }: HomeProps) {
       try {
         const title = await getTitleFromUrl(d.url);
         filenameToUse = title;
-        // Atualiza no backend
         if (username) {
           await updateMainUrlTitle(username, d.url, d.url, title);
         }
-        // Atualiza no frontend
         setDownloads((ds: Download[]) =>
           ds.map((x: Download) =>
             x.id === id ? { ...x, filename: title } : x,
           ),
         );
       } catch {
-        // Se não conseguir pegar o título, mantém o nome genérico
         console.warn(
           "Não foi possível obter o título do HTML, usando nome genérico.",
         );
       }
     }
     setDownloads((ds: Download[]) =>
-      ds.map((x: Download) =>
-        x.id === id ? { ...x, status: "baixando", progress: 10 } : x,
-      ),
+      ds.map((x: Download) => (x.id === id ? { ...x, status: "baixando" } : x)),
     );
-    // Dispara o download sem await para não travar a UI
-    baixarVideoTauri(undefined, username, d.url, d.filename, d.id)
-      .then(() => {
-        // O status será atualizado pelo evento download_progress
-        toast.success(`Download concluído: ${filenameToUse}`);
-      })
-      .catch((err) => {
+    baixarVideoTauri(undefined, username, d.url, d.filename, d.id).catch(
+      (err) => {
         setDownloads((ds: Download[]) =>
           ds.map((x: Download) =>
             x.id === id ? { ...x, status: "erro", progress: 0 } : x,
@@ -242,7 +310,8 @@ function Home({ username }: HomeProps) {
         } else {
           toast.error(`Erro ao baixar: ${filenameToUse}`);
         }
-      });
+      },
+    );
   };
 
   const handleLogout = () => {
@@ -252,71 +321,6 @@ function Home({ username }: HomeProps) {
 
   const handleGoToPanel = () => {
     navigate("/user");
-  };
-
-  const handleEditDownload = (
-    id: number,
-    newVals: { filename: string; url: string; status?: string },
-  ) => {
-    // Busca o valor original do backend antes de editar
-    const original = downloads.find((d) => d.id === id);
-    setDownloads((ds: Download[]) =>
-      ds.map((d) => {
-        if (d.id !== id) return d;
-        // Se o usuário clicou em "Marcar como concluído"
-        if (newVals.status === "concluído") {
-          return { ...d, status: "concluído", progress: 100 };
-        }
-        // Se a URL mudou, resetar status, progresso e filename
-        if (original && newVals.url !== original.url) {
-          return {
-            ...d,
-            url: newVals.url,
-            filename: "",
-            progress: 0,
-            status: "pendente",
-          };
-        }
-        // Se só mudou o nome
-        return { ...d, filename: newVals.filename, url: newVals.url };
-      }),
-    );
-    if (username && original && !newVals.status) {
-      import("../../service/downloadsService").then(
-        async ({ updateMainUrlTitle, getMainUrls }) => {
-          try {
-            await updateMainUrlTitle(
-              username,
-              original.url,
-              newVals.url,
-              newVals.filename,
-            );
-            // Recarrega do backend após editar
-            const urls = await getMainUrls(username);
-            setDownloads(
-              (urls as { url: string; filename: string }[]).map(
-                (item, idx) => ({
-                  id: Date.now() + idx,
-                  url: item.url,
-                  filename: item.filename || `video_${idx + 1}`,
-                  ext: "mp4",
-                  progress: 0,
-                  status: "pendente",
-                  canceled: false,
-                }),
-              ),
-            );
-          } catch (err) {
-            console.error("Erro ao atualizar título/url:", err);
-            toast.error(
-              typeof err === "string"
-                ? err
-                : "Erro ao salvar edição. Verifique os dados e tente novamente.",
-            );
-          }
-        },
-      );
-    }
   };
 
   // Função para adicionar novo download
@@ -331,9 +335,8 @@ function Home({ username }: HomeProps) {
     try {
       // Chama o backend para adicionar a URL
       await import("../../service/downloadsService").then(
-        async ({ getMainUrls }) => {
-          // Aqui você pode adicionar lógica para salvar no backend se necessário
-          // Por simplicidade, apenas recarrega a lista do backend
+        async ({ addMainUrl, getMainUrls }) => {
+          await addMainUrl(username, url, filename);
           const urls = await getMainUrls(username);
           const baixados = await listDownloadedVideos();
           setDownloads(
@@ -438,7 +441,6 @@ function Home({ username }: HomeProps) {
             onOpenFolder={() =>
               openDownloadFolder(d.playlist ? d.playlist : "")
             }
-            onEdit={handleEditDownload}
           />
         ))}
       </DownloadList>
