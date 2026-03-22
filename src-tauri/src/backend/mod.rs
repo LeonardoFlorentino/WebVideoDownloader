@@ -11,3 +11,4 @@ pub mod user;
 pub mod user_service;
 pub mod download_helpers;
 pub mod download_pause_monitor;
+pub mod download_manager;

@@ -316,7 +316,7 @@ function Home({ username }: HomeProps) {
       setPausando((prev) => ({ ...prev, [d.url]: true }));
       try {
         // Chama o comando integrado do backend
-        await invoke("pause_download_integrado", {
+        await invoke("integrated_pause_download", {
           id: String(d.id),
           url: d.url,
         });

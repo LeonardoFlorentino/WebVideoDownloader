@@ -1,3 +1,121 @@
+use std::io::Write;
+use crate::backend::download_manager::{DownloadManager, DownloadTask};
+// Integrated pause download (moved from main.rs)
+#[tauri::command(rename = "integrated_pause_download")]
+pub fn integrated_pause_download(
+    state: tauri::State<'_, std::sync::Arc<DownloadManager>>,
+    id: String,
+    url: String,
+    app: tauri::AppHandle,
+) {
+    let _ = crate::backend::download_progress::get_progress(&url).map(|mut prog| {
+        prog.status = "pausado".to_string();
+        crate::backend::download_progress::update_progress(&url, prog);
+    });
+    let mut downloads = state.downloads.lock().unwrap();
+    if let Some(task) = downloads.get_mut(&id) {
+        task.handle.abort();
+    }
+    let _ = app.emit("download_paused", serde_json::json!({ "url": url }));
+}
+
+// Start download (moved from main.rs)
+#[tauri::command]
+pub async fn start_download(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, std::sync::Arc<DownloadManager>>,
+    id: String,
+    url: String,
+    save_path: String,
+) -> Result<(), String> {
+    let manager = state.inner().clone();
+    let current_size = if std::path::Path::new(&save_path).exists() {
+        std::fs::metadata(&save_path).map(|m| m.len()).unwrap_or(0)
+    } else {
+        0
+    };
+    let client = reqwest::Client::new();
+    let mut request = client.get(&url);
+    if current_size > 0 {
+        request = request.header("Range", format!("bytes={}-", current_size));
+    }
+    let response = request.send().await.map_err(|e| e.to_string())?;
+    let mut total_size = response.content_length()
+        .or_else(|| {
+            response.headers().get("content-range")
+                .and_then(|v| v.to_str().ok())
+                .and_then(|s| s.split('/').nth(1))
+                .and_then(|n| n.parse().ok())
+        })
+        .unwrap_or(0);
+    if total_size == 0 {
+        if let Ok(head_resp) = reqwest::Client::new().head(&url).send().await {
+            total_size = head_resp.content_length().unwrap_or(0);
+        }
+    }
+    if let Some(parent) = std::path::Path::new(&save_path).parent() {
+        println!("[DOWNLOAD] Criando diretório: {:?}", parent);
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    println!("[DOWNLOAD] Abrindo arquivo para escrita: {}", save_path);
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&save_path)
+        .map_err(|e| {
+            println!("[DOWNLOAD][ERRO] Falha ao abrir arquivo: {}", e);
+            e.to_string()
+        })?;
+    let mut stream = response.bytes_stream();
+    let mut downloaded = current_size;
+    println!("[DOWNLOAD] Iniciando download de {} para {} (tamanho total: {})", url, save_path, total_size);
+    let handle = tokio::spawn({
+        let app = app.clone();
+        let id = id.clone();
+        let url_clone = url.clone();
+        async move {
+            use futures_util::StreamExt;
+            while let Some(chunk) = stream.next().await {
+                let chunk = match chunk {
+                    Ok(c) => c,
+                    Err(e) => {
+                        println!("[DOWNLOAD][ERRO] Falha ao receber chunk: {}", e);
+                        break;
+                    }
+                };
+                if let Err(e) = file.write_all(&chunk) {
+                    println!("[DOWNLOAD][ERRO] Falha ao escrever chunk: {}", e);
+                    break;
+                }
+                downloaded += chunk.len() as u64;
+                println!("[DOWNLOAD] Escreveu {} bytes, total baixado: {}", chunk.len(), downloaded);
+                let _ = app.emit("download-progress", super::download_manager::ProgressPayload {
+                    id: id.clone(),
+                    progress: downloaded,
+                    total: total_size,
+                    status: "downloading".to_string(),
+                });
+            }
+            println!("[DOWNLOAD] Download finalizado para {}. Total baixado: {}", save_path, downloaded);
+            let _ = crate::backend::user_service::update_main_url_status(
+                "leona".to_string(), // TODO: pegar username real
+                url_clone.clone(),
+                "concluído".to_string(),
+            );
+            let _ = app.emit("download-progress", super::download_manager::ProgressPayload {
+                id,
+                progress: downloaded,
+                total: total_size,
+                status: "completed".to_string(),
+            });
+        }
+    });
+    let mut downloads = manager.downloads.lock().unwrap();
+    downloads.insert(id.clone(), DownloadTask {
+        handle,
+    });
+    Ok(())
+}
 #[tauri::command]
 pub fn pausar_download(url: String) {
     println!("[PAUSE COMMAND] INICIADO para URL: {}", url);
