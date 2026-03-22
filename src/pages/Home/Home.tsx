@@ -24,8 +24,9 @@ import type { Download } from "@/types/download";
 import { useNavigate } from "react-router-dom";
 import { getMainUrls, removeMainUrl } from "../../service/downloadsService";
 import { baixarVideoTauri } from "../../service/baixarVideo";
-import { pausarDownloadTauri } from "../../service/pausarDownload";
+// import { pausarDownloadTauri } from "../../service/pausarDownload";
 import { resumeDownloadTauri } from "../../service/resumeDownload";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { listDownloadedVideos } from "../../lib/listVideos";
 
@@ -314,7 +315,11 @@ function Home({ username }: HomeProps) {
     if (action === "pause") {
       setPausando((prev) => ({ ...prev, [d.url]: true }));
       try {
-        await pausarDownloadTauri(String(d.id));
+        // Chama o comando integrado do backend
+        await invoke("pause_download_integrado", {
+          id: String(d.id),
+          url: d.url,
+        });
         setPausando((prev) => ({ ...prev, [d.url]: false }));
       } catch {
         setPausando((prev) => ({ ...prev, [d.url]: false }));

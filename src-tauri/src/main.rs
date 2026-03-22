@@ -1,3 +1,24 @@
+// Comando integrado para pausar download: atualiza status e interrompe a task
+#[tauri::command]
+fn pause_download_integrado(
+    state: tauri::State<'_, Arc<DownloadManager>>,
+    id: String,
+    url: String,
+    app: tauri::AppHandle,
+) {
+    // Atualiza status para pausado no progresso
+    let _ = crate::backend::download_progress::get_progress(&url).map(|mut prog| {
+        prog.status = "pausado".to_string();
+        crate::backend::download_progress::update_progress(&url, prog);
+    });
+    // Interrompe a task
+    let mut downloads = state.downloads.lock().unwrap();
+    if let Some(task) = downloads.get_mut(&id) {
+        task.handle.abort();
+    }
+    // Emite evento para frontend
+    let _ = app.emit("download_paused", serde_json::json!({ "url": url }));
+}
 use tauri::Manager;
 use tauri::Emitter;
 use std::io::Write;
@@ -208,6 +229,7 @@ fn main() {
             start_download,
             pause_download,
             resume_download,
+            pause_download_integrado,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

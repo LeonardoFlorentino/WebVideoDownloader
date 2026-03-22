@@ -1,6 +1,6 @@
 import { ClipLoader } from "react-spinners";
 import React from "react";
-import { FiTrash2, FiPause } from "react-icons/fi";
+import { FiTrash2, FiPause, FiPlay } from "react-icons/fi";
 import {
   CardContainer,
   CardFileInfo,
@@ -15,6 +15,7 @@ import {
   CardTopRow,
   CardUrlAndStatus,
   PauseButton,
+  ResumeButton,
 } from "./DownloadCard.styles";
 
 import type { Download } from "@/types/download";
@@ -160,40 +161,28 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
                   marginRight: 6,
                 }}
               >
-                <ClipLoader size={18} color="#fff" />
+                <ClipLoader size={15} color="#fff" />
               </span>
             ) : (
-              <FiPause size={18} style={{ marginRight: 6 }} />
+              <FiPause size={15} style={{ marginRight: 6 }} />
             )}
             Pausar
           </PauseButton>
         )}
         {download.status === "pausado" && (
-          <button
+          <ResumeButton
             type="button"
             onClick={() => onDownload(download.id, "resume")}
             style={{
-              background: "#43a047",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              padding: "6px 16px",
-              fontWeight: 500,
-              cursor: "pointer",
-              opacity: 1,
-              transition: "background 0.2s",
-              outline: "none",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
               gap: 8,
-              fontSize: 16,
-              letterSpacing: 0.2,
               minWidth: 90,
             }}
           >
+            <FiPlay size={15} style={{ marginRight: 6 }} />
             Continuar
-          </button>
+          </ResumeButton>
         )}
         {/* Botão abrir pasta */}
         <OpenFolderButton
