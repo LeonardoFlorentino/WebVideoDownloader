@@ -24,10 +24,11 @@ use tauri::Emitter;
 use std::io::Write;
 mod window_utils;
 mod commands;
-use commands::auth::{cadastrar_usuario_tauri, autenticar_usuario_tauri};
-use commands::video::{baixar_video_tauri, baixar_em_cascata, listar_videos_baixados_tauri, get_title_from_url_tauri};
-use commands::user::{add_main_url_tauri, get_main_urls_tauri, update_main_url_title_tauri, remove_main_url_tauri};
-use commands::playlist::{salvar_playlist_tauri, marcar_playlist_baixada_tauri};
+mod backend;
+use commands::auth::{register_user, authenticate_user};
+use commands::video::{download_video, download_cascade, list_downloaded_videos, get_title_from_url_command};
+use commands::user::{add_main_url_command, get_main_urls_command, update_main_url_title_command, remove_main_url_command};
+use commands::playlist::{save_playlist, mark_playlist_downloaded};
 use commands::folder::open_download_folder_tauri;
 use serde::Serialize;
 use commands::video::pausar_download;
@@ -212,19 +213,19 @@ fn main() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            baixar_video_tauri,
-            baixar_em_cascata,
-            listar_videos_baixados_tauri,
-            get_title_from_url_tauri,
-            cadastrar_usuario_tauri,
-            autenticar_usuario_tauri,
-            add_main_url_tauri,
-            get_main_urls_tauri,
-            update_main_url_title_tauri,
-            salvar_playlist_tauri,
-            marcar_playlist_baixada_tauri,
+            download_video,
+            download_cascade,
+            list_downloaded_videos,
+            get_title_from_url_command,
+            register_user,
+            authenticate_user,
+            add_main_url_command,
+            get_main_urls_command,
+            update_main_url_title_command,
+            save_playlist,
+            mark_playlist_downloaded,
             open_download_folder_tauri,
-            remove_main_url_tauri,
+            remove_main_url_command,
             pausar_download,
             start_download,
             pause_download,
@@ -235,15 +236,4 @@ fn main() {
         .expect("error while running tauri application");
 }
 mod main_url_title_from_html;
-mod backend {
-    pub mod user;
-    pub mod user_service;
-    pub mod auth;
-    pub mod download_progress;
-    pub mod filesystem;
-    pub mod downloads;
-    pub mod playlist;
-    pub mod playlist_service;
-    pub mod listing;
-}
 

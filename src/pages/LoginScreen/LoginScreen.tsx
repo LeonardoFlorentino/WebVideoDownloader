@@ -101,7 +101,7 @@ export default function LoginScreen({
     setLoading(true);
     setError(null);
     try {
-      await invoke("autenticar_usuario_tauri", {
+      await invoke("authenticate_user", {
         username,
         password,
       });

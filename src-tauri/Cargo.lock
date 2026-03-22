@@ -4829,6 +4829,7 @@ dependencies = [
 name = "web_video_downloader"
 version = "0.1.0"
 dependencies = [
+ "bytes",
  "futures-util",
  "log",
  "once_cell",

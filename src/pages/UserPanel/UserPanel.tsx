@@ -86,7 +86,7 @@ const UserPanel: React.FC = () => {
       [playlistId]: { index: 0, downloading: true },
     }));
     try {
-      await invoke("baixar_em_cascata", {
+      await invoke("download_cascade", {
         playlist: playlistName,
         urls: links.map((l) => l.url),
       });

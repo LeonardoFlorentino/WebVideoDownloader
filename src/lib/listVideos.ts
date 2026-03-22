@@ -5,7 +5,7 @@ import type { VideoInfo } from "../types/video";
 export async function listDownloadedVideos(): Promise<VideoInfo[]> {
   // O backend deve expor um comando para listar os arquivos da pasta de vídeos baixados
   // Aqui supomos que existe um comando Tauri chamado 'listar_videos_baixados'
-  const files = await invoke("listar_videos_baixados_tauri");
+  const files = await invoke("list_downloaded_videos");
   // Garante que files seja array
   const arr = Array.isArray(files) ? files : [];
   // Pode-se adicionar lógica para buscar miniaturas e status

@@ -13,7 +13,7 @@ pub fn pausar_download(url: String) {
     }
 }
 use tauri::Emitter;
-use crate::backend::downloads::{baixar_video_emit, baixar_hls_emit, baixar_player_jmvstream};
+use crate::backend::downloads::{baixar_video_emit, baixar_player_jmvstream, baixar_hls_emit};
 use crate::backend::listing::listar_videos_baixados;
 use crate::main_url_title_from_html::get_title_from_url;
 use crate::CommandResult;
@@ -21,8 +21,8 @@ use tauri::Window;
 use uuid::Uuid;
 use std::collections::HashMap;
 
-#[tauri::command]
-pub fn baixar_video_tauri(window: Window, username: String, url: String, filename: String, id: Option<u64>) -> CommandResult<()> {
+#[tauri::command(rename = "download_video")]
+pub fn download_video(window: Window, username: String, url: String, filename: String, id: Option<u64>) -> CommandResult<()> {
     let window_clone = window.clone();
     let username_clone = username.clone();
     let url_clone = url.clone();
@@ -37,7 +37,6 @@ pub fn baixar_video_tauri(window: Window, username: String, url: String, filenam
         };
         let _ = match result {
             Ok(_) => {
-                // Atualiza status no backend para concluído
                 let _ = crate::backend::user_service::update_main_url_status(
                     username_clone.clone(),
                     url_clone.clone(),
@@ -51,8 +50,8 @@ pub fn baixar_video_tauri(window: Window, username: String, url: String, filenam
     CommandResult { ok: true, data: Some(()), error: None }
 }
 
-#[tauri::command(rename = "baixar_em_cascata")]
-pub fn baixar_em_cascata(_playlist: String, urls: Vec<String>) -> CommandResult<()> {
+#[tauri::command(rename = "download_cascade")]
+pub fn download_cascade(_playlist: String, urls: Vec<String>) -> CommandResult<()> {
     // Não há window disponível aqui, então não há emissão de progresso para cascata
     for url in urls {
         let filename = format!("{}.mp4", Uuid::new_v4());
@@ -64,14 +63,14 @@ pub fn baixar_em_cascata(_playlist: String, urls: Vec<String>) -> CommandResult<
     CommandResult { ok: true, data: Some(()), error: None }
 }
 
-#[tauri::command]
-pub fn listar_videos_baixados_tauri() -> CommandResult<Vec<HashMap<String, String>>> {
+#[tauri::command(rename = "list_downloaded_videos")]
+pub fn list_downloaded_videos() -> CommandResult<Vec<HashMap<String, String>>> {
     let data = listar_videos_baixados();
     CommandResult { ok: true, data: Some(data), error: None }
 }
 
-#[tauri::command]
-pub fn get_title_from_url_tauri(url: String) -> CommandResult<String> {
+#[tauri::command(rename = "get_title_from_url")]
+pub fn get_title_from_url_command(url: String) -> CommandResult<String> {
     match get_title_from_url(url) {
         Ok(title) => CommandResult { ok: true, data: Some(title), error: None },
         Err(e) => {

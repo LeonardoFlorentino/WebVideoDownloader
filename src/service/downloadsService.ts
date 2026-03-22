@@ -1,5 +1,8 @@
+import { invoke } from "@tauri-apps/api/core";
+import type { Download } from "@/types/download";
+
 export async function removeMainUrl(username: string, url: string) {
-  return invoke("remove_main_url_tauri", { username, url });
+  return invoke("remove_main_url", { username, url });
 }
 export async function getTitleFromUrl(url: string): Promise<string> {
   return invoke("get_title_from_url", { url });
@@ -20,7 +23,7 @@ export async function updateMainUrlTitle(
   });
 }
 export async function getMainUrls(username: string): Promise<MainUrl[]> {
-  const result = await invoke("get_main_urls_tauri", { username });
+  const result = await invoke("get_main_urls", { username });
   // Se vier no formato { ok, data, error }, retorna só data ou []
   if (result && typeof result === "object" && "data" in result) {
     return Array.isArray(result.data) ? result.data : [];
@@ -28,15 +31,14 @@ export async function getMainUrls(username: string): Promise<MainUrl[]> {
   // Se já for array, retorna direto
   return Array.isArray(result) ? result : [];
 }
+
 export async function addMainUrl(
   username: string,
   url: string,
   filename?: string,
 ) {
-  return invoke("add_main_url_tauri", { username, url, filename });
+  return invoke("add_main_url", { username, url, filename });
 }
-import { invoke } from "@tauri-apps/api/core";
-import type { Download } from "@/types/download";
 
 const getDownloadsKey = (username: string) => `downloads_${username}`;
 
@@ -51,8 +53,4 @@ export function loadDownloads(username: string): Download[] {
 
 export function saveDownloads(username: string, downloads: Download[]) {
   localStorage.setItem(getDownloadsKey(username), JSON.stringify(downloads));
-}
-
-export async function baixarEmCascata(playlist: string, urls: string[]) {
-  return invoke("baixar_em_cascata", { playlist, urls });
 }

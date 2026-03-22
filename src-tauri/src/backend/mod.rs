@@ -1,3 +1,5 @@
+pub mod http_client_helper;
+pub mod download_chunk_writer;
 pub mod auth;
 pub mod downloads;
 pub mod download_progress;
@@ -7,3 +9,5 @@ pub mod playlist;
 pub mod playlist_service;
 pub mod user;
 pub mod user_service;
+pub mod download_helpers;
+pub mod download_pause_monitor;
