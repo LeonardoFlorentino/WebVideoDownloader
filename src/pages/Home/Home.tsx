@@ -22,7 +22,8 @@ import { useEffect, useRef } from "react";
 import { useDownloads } from "../../context/useDownloads";
 import type { Download } from "@/types/download";
 import { useNavigate } from "react-router-dom";
-import { getMainUrls, removeMainUrl } from "../../service/downloadsService";
+import { getMainUrls, removeMainUrlById } from "../../service/downloadsService";
+import type { MainUrl } from "../../service/downloadsService";
 import { baixarVideoTauri } from "../../service/baixarVideo";
 // import { pausarDownloadTauri } from "../../service/pausarDownload";
 import { resumeDownloadTauri } from "../../service/resumeDownload";
@@ -61,14 +62,7 @@ function Home({ username }: HomeProps) {
           // Verifica vídeos já baixados
           const baixados = await listDownloadedVideos();
           setDownloads(
-            (
-              urls as {
-                url: string;
-                filename: string;
-                status?: string;
-                progress?: number;
-              }[]
-            ).map((item, idx) => {
+            (urls as MainUrl[]).map((item, idx) => {
               const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
               const baixado = baixados.find((b) => {
                 const nomeSemExtNorm = nomeSemExt
@@ -82,32 +76,22 @@ function Home({ username }: HomeProps) {
                   .replace(/[^\w\s]/g, "");
                 return baixadoSemExtNorm === nomeSemExtNorm;
               });
+              // Prioriza status persistido no backend
               let status = item.status;
-              let progress =
-                typeof item.progress === "number" ? item.progress : 0;
-              if (!status) {
-                if (baixado) {
-                  status = "concluído";
-                  progress = 100;
-                } else {
-                  status = "pendente";
-                  progress = 0;
-                }
-              } else if (status === "concluído" || status === "concluido") {
+              let progress = 0;
+              if (status === "concluído" || status === "concluido") {
                 progress = 100;
                 status = "concluído";
-              } else if (
-                status === "pausado" ||
-                status === "baixando" ||
-                status === "erro" ||
-                status === "pendente"
-              ) {
-                // Se backend fornecer progresso, use, senão 0
-                progress =
-                  typeof item.progress === "number" ? item.progress : 0;
+              } else if (baixado) {
+                // Se arquivo existe mas status não está como concluído, corrige
+                status = "concluído";
+                progress = 100;
+              } else {
+                status = status || "pendente";
+                progress = 0;
               }
               return {
-                id: Date.now() + idx,
+                id: item.id,
                 url: item.url,
                 filename: item.filename || `video_${idx + 1}`,
                 ext: "mp4",
@@ -231,43 +215,62 @@ function Home({ username }: HomeProps) {
     const d = downloads.find((d) => d.id === id);
     if (!d || !username) return;
     try {
-      await removeMainUrl(username, d.url);
+      const result = await removeMainUrlById(username, d.id);
+      if (result && typeof result === "object" && "ok" in result) {
+        const res = result as { ok: boolean; error?: string };
+        if (!res.ok && res.error) {
+          toast.error(res.error);
+          return;
+        }
+      }
       // Recarrega a lista do backend após remover
       const urls = await getMainUrls(username);
       const baixados = await import("../../lib/listVideos").then((m) =>
         m.listDownloadedVideos(),
       );
       setDownloads(
-        (urls as { url: string; filename: string; status?: string }[]).map(
-          (item, idx) => {
-            const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
-            const baixado = baixados.find((b: { name: string }) => {
-              const nomeSemExtNorm = nomeSemExt
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/[^\w\s]/g, "");
-              const baixadoSemExtNorm = b.name
-                .replace(/\.[^/.]+$/, "")
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/[^\w\s]/g, "");
-              return baixadoSemExtNorm === nomeSemExtNorm;
-            });
-            return {
-              id: Date.now() + idx,
-              url: item.url,
-              filename: item.filename || `video_${idx + 1}`,
-              ext: "mp4",
-              progress: baixado ? 100 : 0,
-              status: item.status || (baixado ? "concluído" : "pendente"),
-              canceled: false,
-            };
-          },
-        ),
+        (urls as MainUrl[]).map((item, idx) => {
+          const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
+          const baixado = baixados.find((b: { name: string }) => {
+            const nomeSemExtNorm = nomeSemExt
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[^\w\s]/g, "");
+            const baixadoSemExtNorm = b.name
+              .replace(/\.[^/.]+$/, "")
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[^\w\s]/g, "");
+            return baixadoSemExtNorm === nomeSemExtNorm;
+          });
+          const status = baixado ? "concluído" : "pendente";
+          const progress = baixado ? 100 : 0;
+          return {
+            id: item.id,
+            url: item.url,
+            filename: item.filename || `video_${idx + 1}`,
+            ext: "mp4",
+            progress,
+            status,
+            canceled: false,
+          };
+        }),
       );
-      toast.success("Vídeo removido!");
-    } catch {
-      toast.error("Erro ao remover vídeo!");
+    } catch (err) {
+      let msg = "Erro ao remover vídeo.";
+      if (
+        err &&
+        typeof err === "object" &&
+        "error" in err &&
+        typeof (err as { error?: string }).error === "string"
+      ) {
+        msg = (err as { error?: string }).error ?? msg;
+      } else if (typeof err === "string") {
+        msg = err;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      toast.error(msg);
     }
   };
 
@@ -418,10 +421,9 @@ function Home({ username }: HomeProps) {
       );
       setUrl("");
       setFilename("");
-      toast.success("Vídeo adicionado!");
-    } catch (err) {
-      console.error("Erro ao adicionar download:", err);
-      toast.error("Erro ao adicionar download. Tente novamente.");
+      // Mensagem de sucesso/erro já é exibida pelo backend, não exibir nada aqui
+    } catch {
+      // Mensagem de erro já é exibida pelo backend, não exibir nada aqui
     }
   };
 

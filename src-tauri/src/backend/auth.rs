@@ -1,6 +1,12 @@
 use crate::backend::user::{UserList, User};
 
 pub fn cadastrar_usuario(username: String, password: String) -> Result<(), String> {
+    if username.trim().is_empty() {
+        return Err("Nome de usuário não pode ser vazio".to_string());
+    }
+    if password.trim().is_empty() {
+        return Err("Senha não pode ser vazia".to_string());
+    }
     let path = crate::backend::filesystem::get_project_root().join("user_data/user.json");
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| format!("Erro ao criar diretório: {}", e))?;

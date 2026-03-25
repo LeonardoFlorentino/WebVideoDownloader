@@ -1,16 +1,64 @@
 {
   "users": [
     {
+      "username": "integration_test_user_2369943723",
+      "password": "integration_test_pass",
+      "playlists": [],
+      "main_urls": []
+    },
+    {
       "username": "Leonardo",
       "password": "123",
       "playlists": [],
-      "main_urls": [
-        {
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-          "filename": "",
-          "status": "pendente"
-        }
-      ]
+      "main_urls": []
+    },
+    {
+      "username": "integration_test_user_3672427386",
+      "password": "integration_test_pass",
+      "playlists": [],
+      "main_urls": []
+    },
+    {
+      "username": "integration_test_user_2655223301",
+      "password": "integration_test_pass",
+      "playlists": [],
+      "main_urls": []
+    },
+    {
+      "username": "integration_test_user_812536785",
+      "password": "integration_test_pass",
+      "playlists": [],
+      "main_urls": []
+    },
+    {
+      "username": "integration_test_user_430810541",
+      "password": "integration_test_pass",
+      "playlists": [],
+      "main_urls": []
+    },
+    {
+      "username": "integration_test_user_4228489547",
+      "password": "integration_test_pass",
+      "playlists": [],
+      "main_urls": []
+    },
+    {
+      "username": "integration_test_user_1492560478",
+      "password": "integration_test_pass",
+      "playlists": [],
+      "main_urls": []
+    },
+    {
+      "username": "integration_test_user_479232550",
+      "password": "integration_test_pass",
+      "playlists": [],
+      "main_urls": []
+    },
+    {
+      "username": "integration_test_user_2945069659",
+      "password": "integration_test_pass",
+      "playlists": [],
+      "main_urls": []
     }
   ]
 }

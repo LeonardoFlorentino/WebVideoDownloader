@@ -1,5 +1,16 @@
+#[cfg(test)]
+mod tests {
+    use crate::commands::playlist::save_playlist;
+
+    #[test]
+    fn test_save_playlist_invalida() {
+        let result = save_playlist("".to_string());
+        assert!(!result.ok);
+    }
+    // Adicione mais testes para outras rotas de playlist
+}
 use crate::backend::playlist_service::{salvar_playlist, marcar_playlist_baixada};
-use crate::CommandResult;
+use crate::commands::download_manager::CommandResult;
 
 #[tauri::command(rename = "save_playlist")]
 pub fn save_playlist(title: String) -> CommandResult<()> {

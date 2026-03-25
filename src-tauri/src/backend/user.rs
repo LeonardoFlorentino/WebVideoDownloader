@@ -2,9 +2,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MainUrl {
+    pub id: u64,
     pub url: String,
     pub filename: String,
     pub status: String, // "pendente" ou "concluído"
+    pub progress: Option<f32>, // 0.0 a 1.0 (None = não iniciado)
 }
 
 #[derive(Serialize, Deserialize, Clone)]

@@ -1,9 +1,30 @@
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_remove_main_url_nao_encontrada() {
+        let username = "usuario_teste".to_string();
+        let url = "url_inexistente".to_string();
+        let result = remove_main_url(username, url);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_main_urls_usuario_nao_encontrado() {
+        let username = "usuario_inexistente".to_string();
+        let result = get_main_urls(username);
+        assert!(result.is_err());
+    }
+    // Adicione mais testes para add_main_url, update_main_url_title, etc.
+}
+
 pub fn remove_main_url(username: String, url: String) -> Result<(), String> {
     let path = crate::backend::filesystem::get_project_root().join("user_data/user.json");
     let mut user_list = read_user_list(&path)?;
     let user = find_user_mut(&mut user_list, &username).ok_or("Usuário não encontrado")?;
+    let url_trimmed = url.trim();
     let original_len = user.main_urls.len();
-    user.main_urls.retain(|mu| mu.url != url);
+    user.main_urls.retain(|mu| mu.url.trim() != url_trimmed);
     if user.main_urls.len() == original_len {
         return Err("URL não encontrada para remoção".to_string());
     }
@@ -23,7 +44,10 @@ pub fn update_main_url_status(username: String, url: String, status: String) -> 
     let mut user_list = read_user_list(&path)?;
     let user = find_user_mut(&mut user_list, &username).ok_or("Usuário não encontrado")?;
     let main_url = find_main_url_mut(user, &url).ok_or("URL não encontrada para o usuário")?;
-    main_url.status = status;
+    // Não sobrescrever se já está concluído
+    if main_url.status != "concluído" {
+        main_url.status = status;
+    }
     write_user_list(&path, &user_list)?;
     Ok(())
 }
@@ -73,16 +97,33 @@ pub fn add_main_url(username: String, url: String, filename: Option<String>) -> 
     let mut user_list = if let Ok(list) = read_user_list(&path) { list } else { UserList::default() };
     let user = find_user_mut(&mut user_list, &username).ok_or("Usuário não encontrado")?;
     if !user.main_urls.iter().any(|mu| mu.url == url) {
+        // Gera id autoincrementado único
+        let next_id = user.main_urls.iter().map(|mu| mu.id).max().unwrap_or(0) + 1;
         user.main_urls.push(MainUrl {
+            id: next_id,
             url: url.clone(),
             filename: filename.clone().unwrap_or_else(|| "video".to_string()),
             status: "pendente".to_string(),
+            progress: None,
         });
         write_user_list(&path, &user_list)?;
         Ok(())
     } else {
         Err("URL já existe para o usuário".to_string())
     }
+}
+
+pub fn remove_main_url_by_id(username: String, id: u64) -> Result<(), String> {
+    let path = crate::backend::filesystem::get_project_root().join("user_data/user.json");
+    let mut user_list = read_user_list(&path)?;
+    let user = find_user_mut(&mut user_list, &username).ok_or("Usuário não encontrado")?;
+    let original_len = user.main_urls.len();
+    user.main_urls.retain(|mu| mu.id != id);
+    if user.main_urls.len() == original_len {
+        return Err("ID não encontrado para remoção".to_string());
+    }
+    write_user_list(&path, &user_list)?;
+    Ok(())
 }
 
 

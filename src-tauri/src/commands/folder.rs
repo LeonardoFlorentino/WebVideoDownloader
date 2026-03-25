@@ -1,5 +1,5 @@
 use crate::backend::filesystem::open_download_folder;
-use crate::CommandResult;
+use crate::commands::download_manager::CommandResult;
 
 #[tauri::command(rename = "open_download_folder")]
 pub fn open_download_folder_tauri(playlist: String) -> CommandResult<()> {

@@ -19,6 +19,9 @@ pub fn marcar_playlist_baixada(title: String) -> Result<(), String> {
 }
 
 pub fn salvar_playlist(title: String) -> Result<(), String> {
+    if title.trim().is_empty() {
+        return Err("Título da playlist não pode ser vazio".to_string());
+    }
     let path = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from(".")).join("src-tauri/src/playlist.json");
     let mut playlists: Vec<crate::backend::playlist::Playlist> = if let Ok(data) = std::fs::read_to_string(&path) {
         serde_json::from_str(&data).unwrap_or_default()

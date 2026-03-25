@@ -100,16 +100,7 @@ const UserPanel: React.FC = () => {
         theme: "dark",
       });
     } catch (e) {
-      console.error("Erro ao baixar playlist:", e);
-      let msg = "";
-      if (typeof e === "string") {
-        msg = e;
-      } else if (e instanceof Error) {
-        msg = e.message;
-      } else {
-        msg = JSON.stringify(e);
-      }
-      toast.error(`Erro ao baixar playlist: ${msg}`);
+      // Mensagem de erro já é exibida pelo backend, não exibir nada aqui
       setCascadeStatus((s) => ({
         ...s,
         [playlistId]: { index: 0, downloading: false },
@@ -208,16 +199,10 @@ const UserPanel: React.FC = () => {
   const handleOpenFolder = (playlistName: string) => {
     openDownloadFolder(playlistName)
       .then(() => {
-        toast.info("Pasta aberta!", {
-          position: "top-center",
-          autoClose: 1500,
-          theme: "dark",
-        });
+        // Mensagem de sucesso já é exibida pelo backend, não exibir nada aqui
       })
       .catch((e) => {
-        toast.error(
-          `Erro ao abrir pasta: ${e && e.toString ? e.toString() : JSON.stringify(e)}`,
-        );
+        // Mensagem de erro já é exibida pelo backend, não exibir nada aqui
       });
   };
 

@@ -13,13 +13,14 @@ use commands::video::{
 };
 use commands::auth::{register_user, authenticate_user};
 use commands::user::{add_main_url_command, get_main_urls_command, update_main_url_title_command, remove_main_url_command};
+use commands::remove_main_url_by_id_command;
 use commands::playlist::{save_playlist, mark_playlist_downloaded};
 use commands::folder::open_download_folder_tauri;
 
 
 
 
-use commands::download_manager::{pause_download, resume_download, CommandResult};
+use commands::download_manager::{pause_download, resume_download};
 
 fn main() {
     let manager = Arc::new(DownloadManager::default());
@@ -40,6 +41,7 @@ fn main() {
             mark_playlist_downloaded,
             open_download_folder_tauri,
             remove_main_url_command,
+            remove_main_url_by_id_command,
             pausar_download,
             start_download,
             pause_download,
