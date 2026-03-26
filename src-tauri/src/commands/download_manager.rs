@@ -15,10 +15,11 @@ pub async fn resume_download(
     app: AppHandle,
     state: State<'_, Arc<DownloadManager>>,
     id: String,
+    username: String,
     url: String,
     save_path: String,
 ) -> Result<(), String> {
-    crate::commands::video::start_download(app, state, id, url, save_path).await
+    crate::commands::video::start_download(app, state, id, username, url, save_path).await
 }
 
 #[tauri::command]

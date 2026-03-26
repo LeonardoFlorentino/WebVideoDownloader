@@ -41,9 +41,22 @@ pub async fn start_download(
     app: tauri::AppHandle,
     state: tauri::State<'_, std::sync::Arc<DownloadManager>>,
     id: String,
+    username: String,
     url: String,
     save_path: String,
 ) -> Result<(), String> {
+    // Always ensure MainUrl entry exists before download
+    let _ = crate::backend::user_service::add_main_url(
+        username.clone(),
+        url.clone(),
+        Some(
+            std::path::Path::new(&save_path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("video.mp4")
+                .to_string(),
+        ),
+    );
     let manager = state.inner().clone();
     let current_size = if std::path::Path::new(&save_path).exists() {
         std::fs::metadata(&save_path).map(|m| m.len()).unwrap_or(0)
@@ -70,10 +83,9 @@ pub async fn start_download(
         }
     }
     if let Some(parent) = std::path::Path::new(&save_path).parent() {
-        println!("[DOWNLOAD] Criando diretório: {:?}", parent);
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    println!("[DOWNLOAD] Abrindo arquivo para escrita: {}", save_path);
+    // println!("[DOWNLOAD] Abrindo arquivo para escrita: {}", save_path);
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -84,49 +96,69 @@ pub async fn start_download(
         })?;
     let mut stream = response.bytes_stream();
     let mut downloaded = current_size;
-    println!("[DOWNLOAD] Iniciando download de {} para {} (tamanho total: {})", url, save_path, total_size);
+    // println!("[DOWNLOAD] Iniciando download de {} para {} (tamanho total: {})", url, save_path, total_size);
     let handle = tokio::spawn({
         let app = app.clone();
         let id = id.clone();
+        let username = username.clone();
+        let url = url.clone();
         async move {
             use futures_util::StreamExt;
+            // Buffer de 1MB
+            let mut write_buffer = Vec::with_capacity(1024 * 1024);
+            let mut last_emit = std::time::Instant::now();
             while let Some(chunk) = stream.next().await {
                 let chunk = match chunk {
                     Ok(c) => c,
-                    Err(e) => {
-                        println!("[DOWNLOAD][ERRO] Falha ao receber chunk: {}", e);
+                    Err(_e) => {
                         break;
                     }
                 };
-                if let Err(e) = file.write_all(&chunk) {
-                    println!("[DOWNLOAD][ERRO] Falha ao escrever chunk: {}", e);
-                    break;
-                }
+                write_buffer.extend_from_slice(&chunk);
                 downloaded += chunk.len() as u64;
-                println!("[DOWNLOAD] Escreveu {} bytes, total baixado: {}", chunk.len(), downloaded);
-                // Atualizar progresso no user.json
-                let _ = if total_size > 0 {
-                    downloaded as f32 / total_size as f32
-                } else {
-                    0.0
-                };
-                // Se desejar persistir progresso, adicione chamada aqui
-                let _ = app.emit("download-progress", super::download_manager::ProgressPayload {
-                    id: id.clone(),
-                    progress: downloaded,
-                    total: total_size,
-                    status: "downloading".to_string(),
-                });
+                // Se buffer >= 1MB, grava no disco
+                if write_buffer.len() >= 1024 * 1024 {
+                    if let Err(_e) = file.write_all(&write_buffer) {
+                        break;
+                    }
+                    write_buffer.clear();
+                }
+                // Atualiza progresso e emite evento a cada 0.5s
+                if last_emit.elapsed().as_millis() > 500 {
+                    let progress = if total_size > 0 {
+                        downloaded as f32 / total_size as f32
+                    } else {
+                        0.0
+                    };
+                    let _ = crate::backend::user_service::update_main_url_progress(
+                        username.clone(),
+                        url.clone(),
+                        progress,
+                    );
+                    let _ = app.emit("download-progress", super::download_manager::ProgressPayload {
+                        id: id.clone(),
+                        progress: downloaded,
+                        total: total_size,
+                        status: "downloading".to_string(),
+                    });
+                    last_emit = std::time::Instant::now();
+                }
             }
-            println!("[DOWNLOAD] Download finalizado para {}. Total baixado: {}", save_path, downloaded);
+            // Grava qualquer resto do buffer
+            if !write_buffer.is_empty() {
+                let _ = file.write_all(&write_buffer);
+            }
             // Calcular progresso final (100%)
-            let _ = if total_size > 0 {
+            let progress = if total_size > 0 {
                 downloaded as f32 / total_size as f32
             } else {
                 1.0
             };
-            // Atualizar status e progresso no user.json
-            // Se desejar persistir status/progresso, adicione chamada aqui
+            let _ = crate::backend::user_service::update_main_url_progress(
+                username.clone(),
+                url.clone(),
+                progress,
+            );
             let _ = app.emit("download-progress", super::download_manager::ProgressPayload {
                 id,
                 progress: downloaded,
@@ -142,17 +174,39 @@ pub async fn start_download(
     Ok(())
 }
 #[tauri::command]
-pub fn pausar_download(url: String) {
-    println!("[PAUSE COMMAND] INICIADO para URL: {}", url);
+pub fn pausar_download(username: String, url: String, save_path: String) {
+    // println!("[PAUSE COMMAND] INICIADO para URL: {}", url);
     use crate::backend::download_progress::{get_progress, update_progress};
-    println!("[PAUSE COMMAND] Recebido pedido de pausa para URL: {}", url);
+    // println!("[PAUSE COMMAND] Recebido pedido de pausa para URL: {}", url);
     if let Some(mut prog) = get_progress(&url) {
-        println!("[PAUSE COMMAND] Progresso encontrado, status atual: {}", prog.status);
+        // println!("[PAUSE COMMAND] Progresso encontrado, status atual: {}", prog.status);
+        let downloaded = prog.downloaded as f32;
+        let total = prog.total_size as f32;
+        let progress = if total > 0.0 { downloaded / total } else { 0.0 };
+        let url_for_add = url.clone();
+        let url_for_update = url.clone();
+        let _url_for_print = url.clone();
         prog.status = "pausado".to_string();
         update_progress(&url, prog);
-        println!("[PAUSE COMMAND] Status atualizado para 'pausado' para URL: {}", url);
+        let _ = crate::backend::user_service::add_main_url(
+            username.clone(),
+            url_for_add,
+            Some(
+                std::path::Path::new(&save_path)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("video.mp4")
+                    .to_string(),
+            ),
+        );
+        let _ = crate::backend::user_service::update_main_url_progress(
+            username,
+            url_for_update,
+            progress,
+        );
+        // println!("[PAUSE COMMAND] Status atualizado para 'pausado' para URL: {}", _url_for_print);
     } else {
-        println!("[PAUSE COMMAND] Nenhum progresso encontrado para URL: {}", url);
+        // println!("[PAUSE COMMAND] Nenhum progresso encontrado para URL: {}", url);
     }
 }
 use tauri::Emitter;

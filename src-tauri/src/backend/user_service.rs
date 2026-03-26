@@ -1,3 +1,23 @@
+/// Update the progress field for a MainUrl in user.json
+pub fn update_main_url_progress(username: String, url: String, progress: f32) -> Result<(), String> {
+    let path = crate::backend::filesystem::get_project_root().join("user_data/user.json");
+    let mut user_list = read_user_list(&path)?;
+    let user = find_user_mut(&mut user_list, &username).ok_or("Usuário não encontrado")?;
+    let main_url = find_main_url_mut(user, &url).ok_or("URL não encontrada para o usuário")?;
+    main_url.progress = Some(progress);
+    // Atualiza status automaticamente
+    if main_url.status != "concluído" {
+        if progress >= 1.0 {
+            main_url.status = "concluído".to_string();
+        } else if progress > 0.0 {
+            main_url.status = "pausado".to_string();
+        } else {
+            main_url.status = "pendente".to_string();
+        }
+    }
+    write_user_list(&path, &user_list)?;
+    Ok(())
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,8 +114,23 @@ pub fn update_main_url_title(username: String, old_url: String, new_url: String,
 
 pub fn add_main_url(username: String, url: String, filename: Option<String>) -> Result<(), String> {
     let path = crate::backend::filesystem::get_project_root().join("user_data/user.json");
-    let mut user_list = if let Ok(list) = read_user_list(&path) { list } else { UserList::default() };
-    let user = find_user_mut(&mut user_list, &username).ok_or("Usuário não encontrado")?;
+    // Try to read user_list, if corrupted, reset to default
+    let mut user_list = match read_user_list(&path) {
+        Ok(list) => list,
+        Err(_) => UserList::default(),
+    };
+    // Auto-create user if not found
+    let user = if let Some(u) = find_user_mut(&mut user_list, &username) {
+        u
+    } else {
+        user_list.users.push(crate::backend::user::User {
+            username: username.clone(),
+            password: String::new(),
+            playlists: Vec::new(),
+            main_urls: Vec::new(),
+        });
+        user_list.users.last_mut().unwrap()
+    };
     if !user.main_urls.iter().any(|mu| mu.url == url) {
         // Gera id autoincrementado único
         let next_id = user.main_urls.iter().map(|mu| mu.id).max().unwrap_or(0) + 1;

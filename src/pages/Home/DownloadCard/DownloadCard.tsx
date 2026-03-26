@@ -35,6 +35,12 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
   onOpenFolder,
   pausando,
 }) => {
+  // Corrige progress percentual (0-1 vindo do backend)
+  const progressPercent =
+    download.total && download.total > 0
+      ? Math.min((download.progress / download.total) * 100, 100)
+      : Math.min(download.progress * 100, 100);
+
   return (
     <CardContainer>
       <CardTopRow>
@@ -69,9 +75,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
               width:
                 download.status === "concluído"
                   ? "100%"
-                  : download.total && download.total > 0
-                    ? `${Math.min((download.progress / download.total) * 100, 100)}%`
-                    : `${download.progress ? Math.min(download.progress, 100) : 0}%`,
+                  : `${progressPercent}%`,
               height: 24,
               borderRadius: 6,
               position: "absolute",
@@ -102,12 +106,8 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
           {download.status === "concluído"
             ? "100.0%"
             : download.status === "pausado"
-              ? download.total && download.total > 0
-                ? `${Math.min((download.progress / download.total) * 100, 100).toFixed(1)}% (Pausado)`
-                : `${download.progress ? Math.min(download.progress, 100).toFixed(1) : 0}% (Pausado)`
-              : download.total && download.total > 0
-                ? `${Math.min((download.progress / download.total) * 100, 100).toFixed(1)}%`
-                : `${download.progress ? Math.min(download.progress, 100).toFixed(1) : 0}%`}
+              ? `${progressPercent.toFixed(1)}% (Pausado)`
+              : `${progressPercent.toFixed(1)}%`}
         </span>
       </CardProgressBar>
       <CardActions>

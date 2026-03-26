@@ -10,7 +10,15 @@
       "username": "Leonardo",
       "password": "123",
       "playlists": [],
-      "main_urls": []
+      "main_urls": [
+        {
+          "id": 1,
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+          "filename": "video_1.mp4",
+          "status": "concluído",
+          "progress": 14.07717
+        }
+      ]
     },
     {
       "username": "integration_test_user_3672427386",

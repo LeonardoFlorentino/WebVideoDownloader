@@ -59,36 +59,14 @@ function Home({ username }: HomeProps) {
       if (username) {
         try {
           const urls = await getMainUrls(username);
-          // Verifica vídeos já baixados
-          const baixados = await listDownloadedVideos();
           setDownloads(
             (urls as MainUrl[]).map((item, idx) => {
-              const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
-              const baixado = baixados.find((b) => {
-                const nomeSemExtNorm = nomeSemExt
-                  .toLowerCase()
-                  .normalize("NFD")
-                  .replace(/[^\w\s]/g, "");
-                const baixadoSemExtNorm = b.name
-                  .replace(/\.[^/.]+$/, "")
-                  .toLowerCase()
-                  .normalize("NFD")
-                  .replace(/[^\w\s]/g, "");
-                return baixadoSemExtNorm === nomeSemExtNorm;
-              });
-              // Prioriza status persistido no backend
-              let status = item.status;
-              let progress = 0;
+              let status = item.status || "pendente";
+              let progress =
+                typeof item.progress === "number" ? item.progress : 0;
               if (status === "concluído" || status === "concluido") {
                 progress = 100;
                 status = "concluído";
-              } else if (baixado) {
-                // Se arquivo existe mas status não está como concluído, corrige
-                status = "concluído";
-                progress = 100;
-              } else {
-                status = status || "pendente";
-                progress = 0;
               }
               return {
                 id: item.id,
@@ -292,6 +270,7 @@ function Home({ username }: HomeProps) {
           : `${d.filename}.mp4`;
         baixarVideoTauri(
           String(d.id),
+          username,
           d.url,
           `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${filename}`,
         ).catch((err) => {
@@ -336,7 +315,7 @@ function Home({ username }: HomeProps) {
           x.id === id ? { ...x, status: "baixando" } : x,
         ),
       );
-      resumeDownloadTauri(String(d.id), d.url, savePath).catch(() => {
+      resumeDownloadTauri(String(d.id), username, d.url, savePath).catch(() => {
         setDownloads((ds: Download[]) =>
           ds.map((x: Download) =>
             x.id === id ? { ...x, status: "erro", progress: 0 } : x,
@@ -348,7 +327,7 @@ function Home({ username }: HomeProps) {
     }
     // Download normal
     try {
-      await baixarVideoTauri(String(d.id), d.url, savePath);
+      await baixarVideoTauri(String(d.id), username, d.url, savePath);
       setDownloads((ds: Download[]) =>
         ds.map((x: Download) =>
           x.id === id ? { ...x, status: "baixando" } : x,
@@ -383,47 +362,52 @@ function Home({ username }: HomeProps) {
       return;
     }
     try {
-      // Chama o backend para adicionar a URL
+      // Garante filename válido
       await import("../../service/downloadsService").then(
         async ({ addMainUrl, getMainUrls }) => {
-          await addMainUrl(username, url, filename);
-          const urls = await getMainUrls(username);
+          // Busca downloads atuais para calcular o próximo idx
+          const currentUrls = await getMainUrls(username);
+          const idx = Array.isArray(currentUrls) ? currentUrls.length : 0;
+          const safeFilename =
+            filename && filename.trim() !== ""
+              ? filename
+              : `video_${idx + 1}.mp4`;
+          await addMainUrl(username, url, safeFilename);
+          const newUrls = await getMainUrls(username);
           const baixados = await listDownloadedVideos();
           setDownloads(
-            (urls as { url: string; filename: string; status?: string }[]).map(
-              (item, idx) => {
-                const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
-                const baixado = baixados.find((b) => {
-                  const nomeSemExtNorm = nomeSemExt
-                    .toLowerCase()
-                    .normalize("NFD")
-                    .replace(/[^\w\s]/g, "");
-                  const baixadoSemExtNorm = b.name
-                    .replace(/\.[^/.]+$/, "")
-                    .toLowerCase()
-                    .normalize("NFD")
-                    .replace(/[^\w\s]/g, "");
-                  return baixadoSemExtNorm === nomeSemExtNorm;
-                });
-                return {
-                  id: Date.now() + idx,
-                  url: item.url,
-                  filename: item.filename || `video_${idx + 1}`,
-                  ext: "mp4",
-                  progress: baixado ? 100 : 0,
-                  status: item.status || (baixado ? "concluído" : "pendente"),
-                  canceled: false,
-                };
-              },
-            ),
+            (
+              newUrls as { url: string; filename: string; status?: string }[]
+            ).map((item, idx2) => {
+              const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
+              const baixado = baixados.find((b) => {
+                const nomeSemExtNorm = nomeSemExt
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[^\w\s]/g, "");
+                const baixadoSemExtNorm = b.name
+                  .replace(/\.[^/.]+$/, "")
+                  .toLowerCase()
+                  .normalize("NFD")
+                  .replace(/[^\w\s]/g, "");
+                return baixadoSemExtNorm === nomeSemExtNorm;
+              });
+              return {
+                id: Date.now() + idx2,
+                url: item.url,
+                filename: item.filename || `video_${idx2 + 1}`,
+                ext: "mp4",
+                progress: baixado ? 100 : 0,
+                status: item.status || (baixado ? "concluído" : "pendente"),
+                canceled: false,
+              };
+            }),
           );
         },
       );
-      setUrl("");
+    } catch {
       setFilename("");
       // Mensagem de sucesso/erro já é exibida pelo backend, não exibir nada aqui
-    } catch {
-      // Mensagem de erro já é exibida pelo backend, não exibir nada aqui
     }
   };
 

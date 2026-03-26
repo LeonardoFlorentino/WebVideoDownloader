@@ -6,6 +6,7 @@ export type MainUrl = {
   url: string;
   filename: string;
   status?: string;
+  progress?: number;
 };
 
 export async function removeMainUrlById(username: string, id: number) {
