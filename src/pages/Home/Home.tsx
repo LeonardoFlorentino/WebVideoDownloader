@@ -471,7 +471,7 @@ function Home({ username }: HomeProps) {
             download={d}
             onDownload={handleDownload}
             onRemove={handleRemove}
-            onOpenFolder={() => openDownloadFolder(d.filename)}
+            onOpenFolder={() => openDownloadFolder("")}
             pausando={!!pausando[d.url]}
           />
         ))}
