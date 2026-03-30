@@ -9,7 +9,8 @@ pub struct DownloadProgress {
     pub filename: String,
     pub total_size: u64,
     pub downloaded: u64,
-    pub status: String, // "baixando", "pausado", "concluido", "erro"
+    pub status: String, // "baixando", "pausado", "concluído", "erro"
+    pub id: Option<u64>, // id numérico para eventos
 }
 
 pub fn get_progress_file() -> PathBuf {
@@ -41,43 +42,21 @@ pub fn save_all_progress(map: &HashMap<String, DownloadProgress>) {
 
 pub fn update_progress(url: &str, progress: DownloadProgress) {
     let mut all = load_all_progress();
-    use std::time::{SystemTime, UNIX_EPOCH};
-    static mut LAST_UPDATE_LOG: u128 = 0;
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
-    if progress.status == "baixando" {
-        let mut should_print = false;
-        unsafe {
-            if now - LAST_UPDATE_LOG > 5000 {
-                should_print = true;
-                LAST_UPDATE_LOG = now;
-            }
-        }
-        if should_print {
-            println!("[UPDATE_PROGRESS] Salvando status 'baixando' para URL: {}", url);
-        }
-    } else {
-        println!("[UPDATE_PROGRESS] Salvando status '{}' para URL: {}", progress.status, url);
-    }
-    all.insert(url.to_string(), progress);
+    all.insert(url.to_string(), progress.clone());
     save_all_progress(&all);
+    // Log detalhado
+    println!("[BACKEND][update_progress] url='{}' status='{}' downloaded={} total={} filename='{}' id={:?}", url, progress.status, progress.downloaded, progress.total_size, progress.filename, progress.id);
 }
 
 pub fn get_progress(url: &str) -> Option<DownloadProgress> {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    static mut LAST_PRINT: u128 = 0;
     let all = load_all_progress();
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis();
-    let mut should_print = false;
-    unsafe {
-        if now - LAST_PRINT > 5000 {
-            should_print = true;
-            LAST_PRINT = now;
-        }
+    let found = all.get(url);
+    if let Some(p) = found {
+        println!("[BACKEND][get_progress] url='{}' status='{}' downloaded={} total={} filename='{}' id={:?}", url, p.status, p.downloaded, p.total_size, p.filename, p.id);
+    } else {
+        println!("[BACKEND][get_progress] url='{}' NÃO ENCONTRADO", url);
     }
-    if should_print {
-        println!("[GET_PROGRESS] Buscando progresso para URL: {}. URLs existentes: {:?}", url, all.keys().collect::<Vec<_>>() );
-    }
-    all.get(url).cloned()
+    found.cloned()
 }
 
 pub fn remove_progress(url: &str) {

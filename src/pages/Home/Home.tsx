@@ -30,6 +30,7 @@ import { resumeDownloadTauri } from "../../service/resumeDownload";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { listDownloadedVideos } from "../../lib/listVideos";
+import { pollDownloadsProgress } from "../../service/downloadsService";
 
 type HomeProps = { username: string };
 function Home({ username }: HomeProps) {
@@ -41,6 +42,7 @@ function Home({ username }: HomeProps) {
   const [filename, setFilename] = useState("");
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [pausando, setPausando] = useState<{ [url: string]: boolean }>({});
+  const [pollingAtivo, setPollingAtivo] = useState(false);
   const navigate = useNavigate();
   const downloadsRef = useRef(downloads);
 
@@ -59,29 +61,26 @@ function Home({ username }: HomeProps) {
       if (username) {
         try {
           const urls = await getMainUrls(username);
-          setDownloads(
-            (urls as MainUrl[]).map((item, idx) => {
-              let status = item.status || "pendente";
-              let progress =
-                typeof item.progress === "number" ? item.progress : 0;
-              if (status === "concluído" || status === "concluido") {
-                progress = 100;
-                status = "concluído";
-              }
+          // Para cada url, busca progresso real
+          const urlsWithProgress = await Promise.all(
+            (urls as MainUrl[]).map(async (item, idx) => {
+              // O frontend só deve mostrar "concluído" se vier do backend (getMainUrls)
+              // Não deve inferir localmente por progresso ou eventos
               return {
                 id: item.id,
                 url: item.url,
                 filename: item.filename || `video_${idx + 1}`,
                 ext: "mp4",
-                progress,
-                status,
+                progress: typeof item.progress === "number" ? item.progress : 0,
+                status: item.status || "pendente",
                 canceled: false,
                 playlist: "", // sempre avulso na Home
               };
             }),
           );
-        } catch (err) {
-          console.error("Erro ao buscar urls do backend:", err);
+          setDownloads(urlsWithProgress);
+        } catch {
+          // Removido console.error
         }
       }
     };
@@ -98,7 +97,6 @@ function Home({ username }: HomeProps) {
     let unlistenProgress: (() => void) | undefined;
     let unlistenFinished: (() => void) | undefined;
     let unlistenPaused: (() => void) | undefined;
-    let lastProgressLog = 0;
     (async () => {
       unlistenProgress = await listen<{
         id: string;
@@ -107,23 +105,9 @@ function Home({ username }: HomeProps) {
         status: string;
       }>("download-progress", (event) => {
         const { id, progress, total, status } = event.payload;
-        const now = Date.now();
         setDownloads((ds) =>
           ds.map((d) => {
-            if (String(d.id) === id) {
-              if (now - lastProgressLog > 2000) {
-                console.log(
-                  "[EVENTO PROGRESSO]",
-                  id,
-                  "progress:",
-                  progress,
-                  "total:",
-                  total,
-                  "status atual:",
-                  d.status,
-                );
-                lastProgressLog = now;
-              }
+            if (String(d.id) === String(id)) {
               return {
                 ...d,
                 progress,
@@ -152,16 +136,8 @@ function Home({ username }: HomeProps) {
             if (d.url !== url) return d;
             // Se o status atual for 'pausado', não sobrescreva para 'concluído'
             if (d.status === "pausado") {
-              console.log(
-                "[EVENTO FINISHED]",
-                url,
-                "status recebido:",
-                status,
-                "status mantido como pausado",
-              );
               return { ...d, error: error || undefined };
             }
-            console.log("[EVENTO FINISHED]", url, "status recebido:", status);
             return {
               ...d,
               status: status === "concluido" ? "concluído" : status,
@@ -188,6 +164,56 @@ function Home({ username }: HomeProps) {
       if (unlistenPaused) unlistenPaused();
     };
   }, [setDownloads]);
+
+  // Polling de progresso dos downloads ativos (só após baixar)
+  useEffect(() => {
+    if (!pollingAtivo) return;
+    const interval = setInterval(async () => {
+      // Só faz polling se houver downloads ativos
+      const ativos = downloads.filter(
+        (d) => d.status === "baixando" || d.status === "pendente",
+      );
+      if (ativos.length === 0) {
+        // Se todos os downloads estão concluídos, encerra o polling
+        const statusFinalizados = [
+          "concluído",
+          "concluido",
+          "sucesso",
+          "finalizado",
+        ];
+        const todosConcluidos =
+          downloads.length > 0 &&
+          downloads.every((d) =>
+            statusFinalizados.includes((d.status || "").toLowerCase()),
+          );
+        if (todosConcluidos) {
+          setPollingAtivo(false);
+        }
+        return;
+      }
+      const progressos = await pollDownloadsProgress(ativos);
+      setDownloads((ds) =>
+        ds.map((d) => {
+          const found = progressos.find((p) => p.id === d.id);
+          if (
+            found &&
+            typeof found.progress === "number" &&
+            typeof found.total === "number"
+          ) {
+            // Salva progress e total como bytes, não percentual!
+            return {
+              ...d,
+              progress: found.progress,
+              total: found.total,
+              status: found.status || d.status,
+            };
+          }
+          return d;
+        }),
+      );
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [downloads, setDownloads, pollingAtivo]);
 
   const handleRemove = async (id: number) => {
     const d = downloads.find((d) => d.id === id);
@@ -257,6 +283,7 @@ function Home({ username }: HomeProps) {
 
   const handleDownloadAll = () => {
     setDownloadingAll(true);
+    setPollingAtivo(true); // Ativa polling/logs ao baixar
     downloads.forEach((d) => {
       if (d.status === "pendente") {
         setDownloads((ds: Download[]) =>
@@ -288,6 +315,7 @@ function Home({ username }: HomeProps) {
 
   // Novo handleDownload para pause/resume/stop
   const handleDownload = async (id: number, action?: "pause" | "resume") => {
+    setPollingAtivo(true); // Ativa polling/logs ao baixar individual
     const d = downloads.find((x: Download) => x.id === id);
     if (!d) return;
     const filename = d.filename.endsWith(".mp4")
@@ -297,7 +325,6 @@ function Home({ username }: HomeProps) {
     if (action === "pause") {
       setPausando((prev) => ({ ...prev, [d.url]: true }));
       try {
-        // Chama o comando integrado do backend
         await invoke("integrated_pause_download", {
           id: String(d.id),
           url: d.url,
@@ -326,13 +353,11 @@ function Home({ username }: HomeProps) {
       return;
     }
     // Download normal
+    setDownloads((ds: Download[]) =>
+      ds.map((x: Download) => (x.id === id ? { ...x, status: "baixando" } : x)),
+    );
     try {
       await baixarVideoTauri(String(d.id), username, d.url, savePath);
-      setDownloads((ds: Download[]) =>
-        ds.map((x: Download) =>
-          x.id === id ? { ...x, status: "baixando" } : x,
-        ),
-      );
     } catch (err) {
       setDownloads((ds: Download[]) =>
         ds.map((x: Download) =>

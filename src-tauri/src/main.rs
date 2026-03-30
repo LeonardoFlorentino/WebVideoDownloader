@@ -10,6 +10,8 @@ use commands::video::{
     start_download,
     integrated_pause_download,
     pausar_download,
+    get_progress_command,
+    download_special_video,
 };
 use commands::auth::{register_user, authenticate_user};
 use commands::user::{add_main_url_command, get_main_urls_command, update_main_url_title_command, remove_main_url_command};
@@ -47,6 +49,9 @@ fn main() {
             pause_download,
             resume_download,
             integrated_pause_download,
+            // baixar_video_roteado_tauri removido
+            get_progress_command,
+            download_special_video,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

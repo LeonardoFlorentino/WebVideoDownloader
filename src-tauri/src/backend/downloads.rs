@@ -82,14 +82,22 @@ pub fn baixar_video_emit(window: Option<&Window>, url: &str, filename: &str) -> 
             latest.total_size = total_size;
             latest.downloaded = downloaded;
             latest.status = "baixando".to_string();
+            // Garante que o id seja mantido
             latest
         } else {
+            // Tenta extrair id do nome do arquivo, se possível
+            let id = if let Some(stem) = std::path::Path::new(&ext).file_stem().and_then(|s| s.to_str()) {
+                stem.split('_').last().and_then(|n| n.parse::<u64>().ok())
+            } else {
+                None
+            };
             DownloadProgress {
                 url: url.to_string(),
                 filename: ext.clone(),
                 total_size,
                 downloaded,
                 status: "baixando".to_string(),
+                id,
             }
         };
         println!("[DOWNLOAD] Atualizando progresso para status: {} ({} bytes)", progress.status, progress.downloaded);
@@ -109,6 +117,7 @@ pub fn baixar_video_emit(window: Option<&Window>, url: &str, filename: &str) -> 
         // Verifica se arquivo está vazio e finaliza download
         let meta = std::fs::metadata(&path).map_err(|e| format!("Erro ao finalizar arquivo: {}", e))?;
         if meta.len() == 0 {
+            println!("[BACKEND][ERRO] Arquivo criado mas está vazio para URL: {}", url);
             progress.status = "erro".to_string();
             update_progress(url, progress.clone());
             return Err("Arquivo criado mas está vazio".to_string());
@@ -116,10 +125,13 @@ pub fn baixar_video_emit(window: Option<&Window>, url: &str, filename: &str) -> 
 
         // Marca como concluído
         if progress.status != "pausado" && progress.status != "erro" {
-            progress.status = "concluido".to_string();
+            progress.status = "concluído".to_string();
             progress.downloaded = total_size;
+            println!("[BACKEND][CONCLUIDO] Download finalizado para URL: {} | Arquivo: {} | Tamanho: {} bytes", url, path.display(), total_size);
             update_progress(url, progress.clone());
             remove_progress(url); // Limpa progresso persistente ao concluir
+        } else {
+            println!("[BACKEND][INFO] Download NÃO concluído para URL: {} | Status final: {}", url, progress.status);
         }
 
         Ok(())
@@ -129,13 +141,13 @@ use tauri::Window;
 use regex::Regex;
 
 
-pub fn baixar_hls_emit(window: &Window, m3u8_url: &str, filename: &str, _id: Option<u64>) -> Result<(), String> {
+pub fn baixar_hls_emit(window: &Window, username: &str, m3u8_url: &str, filename: &str, _id: Option<u64>) -> Result<(), String> {
     let client = create_blocking_client()?;
     let mut path = crate::backend::filesystem::get_project_root();
     path.push("Vídeos baixados");
     std::fs::create_dir_all(&path).map_err(|e| format!("Erro ao criar pasta: {}", e))?;
     path.push(filename);
-    crate::backend::download_helpers::download_hls_file(&client, m3u8_url, &path, Some(window), Some("download_progress"))
+    crate::backend::download_helpers::download_hls_file(&client, m3u8_url, &path, Some(window), Some("download_progress"), _id, Some(username))
 }
 
 pub fn baixar_player_jmvstream(window: &Window, username: &str, player_url: &str, output: &str, _id: Option<u64>) -> Result<(), String> {
@@ -177,6 +189,6 @@ pub fn baixar_player_jmvstream(window: &Window, username: &str, player_url: &str
     dest.push("Vídeos baixados");
     std::fs::create_dir_all(&dest).map_err(|e| format!("Erro ao criar pasta: {}", e))?;
     dest.push(output);
-    crate::backend::download_helpers::download_hls_file(&client, m3u8_url, &dest, Some(window), Some("download_progress"))
+    crate::backend::download_helpers::download_hls_file(&client, m3u8_url, &dest, Some(window), Some("download_progress"), _id, None)
 }
 

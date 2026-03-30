@@ -1,3 +1,49 @@
+#[allow(dead_code)]
+// Handles HLS and JMV downloads with window
+#[tauri::command]
+pub fn download_special_video(window: tauri::Window, username: String, url: String, save_path: String, id: Option<u64>) -> CommandResult<()> {
+    let filename = std::path::Path::new(&save_path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("video.mp4").to_string();
+    if url.ends_with(".m3u8") || url.contains(".m3u8?") {
+        let result = baixar_hls_emit(&window, &username, &url, &filename, id);
+        return match result {
+            Ok(_) => CommandResult { ok: true, data: Some(()), error: None },
+            Err(e) => CommandResult { ok: false, data: None, error: Some(e) },
+        };
+    } else if url.contains("player.jmvstream.com") {
+        let result = baixar_player_jmvstream(&window, &username, &url, &filename, id);
+        return match result {
+            Ok(_) => CommandResult { ok: true, data: Some(()), error: None },
+            Err(e) => CommandResult { ok: false, data: None, error: Some(e) },
+        };
+    }
+    CommandResult { ok: false, data: None, error: Some("Invalid special video type".to_string()) }
+}
+use serde::Serialize;
+#[derive(Serialize)]
+pub struct GetProgressResult {
+    pub ok: bool,
+    pub data: Option<crate::backend::download_progress::DownloadProgress>,
+    pub error: Option<String>,
+}
+
+#[tauri::command]
+pub fn get_progress_command(url: String) -> GetProgressResult {
+    match crate::backend::download_progress::get_progress(&url) {
+        Some(progress) => GetProgressResult {
+            ok: true,
+            data: Some(progress),
+            error: None,
+        },
+        None => GetProgressResult {
+            ok: false,
+            data: None,
+            error: Some("No progress found for URL".to_string()),
+        },
+    }
+}
 #[cfg(test)]
 mod tests {
     use crate::commands::video::get_title_from_url_command;
@@ -57,6 +103,13 @@ pub async fn start_download(
                 .to_string(),
         ),
     );
+
+    // If HLS or JMV, return error to frontend to call download_special_video
+    if url.ends_with(".m3u8") || url.contains(".m3u8?") || url.contains("player.jmvstream.com") {
+        return Err("special_video".to_string());
+    }
+
+    // Fluxo padrão para arquivos diretos
     let manager = state.inner().clone();
     let current_size = if std::path::Path::new(&save_path).exists() {
         std::fs::metadata(&save_path).map(|m| m.len()).unwrap_or(0)
@@ -85,7 +138,6 @@ pub async fn start_download(
     if let Some(parent) = std::path::Path::new(&save_path).parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    // println!("[DOWNLOAD] Abrindo arquivo para escrita: {}", save_path);
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -96,7 +148,6 @@ pub async fn start_download(
         })?;
     let mut stream = response.bytes_stream();
     let mut downloaded = current_size;
-    // println!("[DOWNLOAD] Iniciando download de {} para {} (tamanho total: {})", url, save_path, total_size);
     let handle = tokio::spawn({
         let app = app.clone();
         let id = id.clone();
@@ -104,7 +155,6 @@ pub async fn start_download(
         let url = url.clone();
         async move {
             use futures_util::StreamExt;
-            // Buffer de 1MB
             let mut write_buffer = Vec::with_capacity(1024 * 1024);
             let mut last_emit = std::time::Instant::now();
             while let Some(chunk) = stream.next().await {
@@ -116,14 +166,12 @@ pub async fn start_download(
                 };
                 write_buffer.extend_from_slice(&chunk);
                 downloaded += chunk.len() as u64;
-                // Se buffer >= 1MB, grava no disco
                 if write_buffer.len() >= 1024 * 1024 {
                     if let Err(_e) = file.write_all(&write_buffer) {
                         break;
                     }
                     write_buffer.clear();
                 }
-                // Atualiza progresso e emite evento a cada 0.5s
                 if last_emit.elapsed().as_millis() > 500 {
                     let progress = if total_size > 0 {
                         downloaded as f32 / total_size as f32
@@ -144,11 +192,9 @@ pub async fn start_download(
                     last_emit = std::time::Instant::now();
                 }
             }
-            // Grava qualquer resto do buffer
             if !write_buffer.is_empty() {
                 let _ = file.write_all(&write_buffer);
             }
-            // Calcular progresso final (100%)
             let progress = if total_size > 0 {
                 downloaded as f32 / total_size as f32
             } else {
@@ -218,6 +264,7 @@ use tauri::Window;
 use uuid::Uuid;
 use std::collections::HashMap;
 
+
 #[tauri::command]
 pub fn download_video(window: Window, username: String, url: String, filename: String, id: Option<u64>) -> CommandResult<()> {
     let window_clone = window.clone();
@@ -228,7 +275,7 @@ pub fn download_video(window: Window, username: String, url: String, filename: S
         let result = if url_clone.contains("player.jmvstream.com") {
             baixar_player_jmvstream(&window_clone, &username_clone, &url_clone, &filename_clone, id)
         } else if url_clone.ends_with(".m3u8") || url_clone.contains(".m3u8?") {
-            baixar_hls_emit(&window_clone, &url_clone, &filename_clone, id)
+            baixar_hls_emit(&window_clone, &username_clone, &url_clone, &filename_clone, id)
         } else {
             baixar_video_emit(Some(&window_clone), &url_clone, &filename_clone)
         };

@@ -1,7 +1,18 @@
 {
-  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4": {
-    "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-    "filename": "video_1.mp4",
-    "total_size": 169612362,
-    "downloaded": 58627896,
-    "status": "pausado"
+  "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8": {
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+    "filename": "video_2.mp4",
+    "total_size": 31182285,
+    "downloaded": 31182285,
+    "status": "concluído",
+    "id": 3
+  },
+  "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=2042000.m3u8": {
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=2042000.m3u8",
+    "filename": "video_2.mp4",
+    "total_size": 32245384,
+    "downloaded": 32245384,
+    "status": "concluído",
+    "id": 3
+  }
+}

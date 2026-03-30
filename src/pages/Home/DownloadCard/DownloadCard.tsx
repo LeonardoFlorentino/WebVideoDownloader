@@ -35,11 +35,15 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
   onOpenFolder,
   pausando,
 }) => {
-  // Corrige progress percentual (0-1 vindo do backend)
+  // Calcula percentual corretamente a partir de bytes
   const progressPercent =
     download.total && download.total > 0
       ? Math.min((download.progress / download.total) * 100, 100)
-      : Math.min(download.progress * 100, 100);
+      : 0;
+
+  // Normaliza status para tratar "concluido" e "concluído" como equivalentes
+  const isConcluido =
+    download.status === "concluído" || download.status === "concluido";
 
   return (
     <CardContainer>
@@ -53,7 +57,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         <CardUrlAndStatus>
           <CardUrlText>{download.url}</CardUrlText>
           <CardStatus $status={download.status}>
-            {download.status === "concluído"
+            {isConcluido
               ? "Concluído"
               : download.status === "baixando"
                 ? "Baixando..."
@@ -65,17 +69,12 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
           </CardStatus>
         </CardUrlAndStatus>
       </CardTopRow>
-      <CardProgressBar
-        style={{ position: "relative", height: 24, marginTop: 8 }}
-      >
+      <CardProgressBar style={{ position: "relative", height: 24, marginTop: 8 }}>
         <CardProgressTrack style={{ height: 24 }}>
           <CardProgressFill
             $status={download.status}
             style={{
-              width:
-                download.status === "concluído"
-                  ? "100%"
-                  : `${progressPercent}%`,
+              width: isConcluido ? "100%" : `${progressPercent}%`,
               height: 24,
               borderRadius: 6,
               position: "absolute",
@@ -103,7 +102,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
             textShadow: "0 1px 4px #23284d, 0 0 2px #23284d, 0 0 6px #23284d",
           }}
         >
-          {download.status === "concluído"
+          {isConcluido
             ? "100.0%"
             : download.status === "pausado"
               ? `${progressPercent.toFixed(1)}% (Pausado)`

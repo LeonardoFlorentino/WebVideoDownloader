@@ -42,13 +42,13 @@ where
                 current += chunk.len() as u64;
                 progress.downloaded = current;
                 update_progress(url, progress.clone());
-                let percent = if total_size > 0 {
-                    (current as f64 / total_size as f64) * 100.0
-                } else {
-                    0.0
-                };
                 if let Some(w) = window {
-                    let _ = w.emit("download_progress", serde_json::json!({ "url": url, "progress": percent }));
+                    let _ = w.emit("download-progress", serde_json::json!({
+                        "id": progress.id.unwrap_or(0).to_string(),
+                        "progress": current,
+                        "total": total_size,
+                        "status": "baixando"
+                    }));
                 }
             }
             Ok(None) => {
