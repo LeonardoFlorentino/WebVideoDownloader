@@ -1,6 +1,6 @@
-import { ClipLoader } from "react-spinners";
 import React from "react";
-import { FiTrash2, FiPause, FiPlay } from "react-icons/fi";
+import { FiTrash2, FiEdit2 } from "react-icons/fi";
+import { EditDownloadModal } from "../../../components/EditDownloadModal";
 import {
   CardContainer,
   CardFileInfo,
@@ -14,26 +14,42 @@ import {
   OpenFolderButton,
   CardTopRow,
   CardUrlAndStatus,
-  PauseButton,
-  ResumeButton,
 } from "./DownloadCard.styles";
 
-import type { Download } from "@/types/download";
+interface Download {
+  id: number;
+  filename: string;
+  ext: string;
+  url: string;
+  status: string;
+  total?: number;
+  progress: number;
+}
 
 interface DownloadCardProps {
   download: Download;
-  onDownload: (id: number, action?: "pause" | "resume") => void;
-  onRemove: (id: number) => void;
   onOpenFolder: () => void;
-  pausando?: boolean;
+  onRemove: (id: number) => void;
+  onStartDownload: (id: number) => void;
+  editModalOpen: boolean;
+  editFilename: string;
+  editUrl: string;
+  openEditModal: () => void;
+  handleEditSave: (filename: string, url: string) => void;
+  handleEditCancel: () => void;
 }
 
 const DownloadCard: React.FC<DownloadCardProps> = ({
   download,
-  onDownload,
-  onRemove,
   onOpenFolder,
-  pausando,
+  onRemove,
+  onStartDownload,
+  editModalOpen,
+  editFilename,
+  editUrl,
+  openEditModal,
+  handleEditSave,
+  handleEditCancel,
 }) => {
   // Calcula percentual corretamente a partir de bytes
   const progressPercent =
@@ -112,80 +128,27 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         </span>
       </CardProgressBar>
       <CardActions>
-        {/* Botão dinâmico: baixar, pausar, continuar */}
-        {download.status === "pendente" && (
-          <button
-            type="button"
-            onClick={() => onDownload(download.id)}
-            style={{
-              background: "#6c63ff",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              padding: "6px 16px",
-              fontWeight: 500,
-              cursor: "pointer",
-              opacity: 1,
-              transition: "background 0.2s",
-              outline: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              fontSize: 16,
-              letterSpacing: 0.2,
-              minWidth: 90,
-            }}
-          >
-            Baixar
-          </button>
-        )}
-        {download.status === "baixando" && (
-          <PauseButton
-            type="button"
-            onClick={() => onDownload(download.id, "pause")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              cursor: pausando ? "not-allowed" : "pointer",
-              opacity: pausando ? 0.6 : 1,
-              pointerEvents: pausando ? "none" : "auto",
-            }}
-            disabled={!!pausando}
-          >
-            {pausando ? (
-              <span
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  marginRight: 6,
-                }}
-              >
-                <ClipLoader size={15} color="#fff" />
-              </span>
-            ) : (
-              <FiPause size={15} style={{ marginRight: 6 }} />
-            )}
-            Pausar
-          </PauseButton>
-        )}
-        {download.status === "pausado" && (
-          <ResumeButton
-            type="button"
-            onClick={() => onDownload(download.id, "resume")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              minWidth: 90,
-            }}
-          >
-            <FiPlay size={15} style={{ marginRight: 6 }} />
-            Continuar
-          </ResumeButton>
-        )}
-        {/* Botão abrir pasta */}
+                {/* Botão Baixar */}
+                {download.status === "pendente" && (
+                  <button
+                    type="button"
+                    title="Baixar vídeo"
+                    onClick={() => onStartDownload(download.id)}
+                    style={{
+                      background: "#6c63ff",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "6px 16px",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      marginRight: 8,
+                      fontSize: 16,
+                    }}
+                  >
+                    Baixar
+                  </button>
+                )}
         <OpenFolderButton
           type="button"
           onClick={onOpenFolder}
@@ -193,7 +156,27 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         >
           Abrir Pasta
         </OpenFolderButton>
-        {/* Botão remover */}
+        <button
+          type="button"
+          title="Editar nome e URL"
+          onClick={openEditModal}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#6c63ff",
+            borderRadius: 6,
+            padding: 6,
+            marginRight: 2,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 20,
+          }}
+          aria-label="Editar nome e URL"
+        >
+          <FiEdit2 size={18} />
+        </button>
         <button
           type="button"
           title="Remover da lista"
@@ -216,6 +199,13 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         >
           <FiTrash2 size={22} />
         </button>
+        <EditDownloadModal
+          isOpen={editModalOpen}
+          initialFilename={editFilename}
+          initialUrl={editUrl}
+          onSave={handleEditSave}
+          onCancel={handleEditCancel}
+        />
       </CardActions>
     </CardContainer>
   );

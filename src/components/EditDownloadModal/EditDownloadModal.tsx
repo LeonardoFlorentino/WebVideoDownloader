@@ -107,6 +107,13 @@ export const EditDownloadModal: React.FC<EditDownloadModalProps> = ({
   const [filename, setFilename] = useState(initialFilename);
   const [url, setUrl] = useState(initialUrl);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setFilename(initialFilename);
+      setUrl(initialUrl);
+    }
+  }, [isOpen, initialFilename, initialUrl]);
+
   if (!isOpen) return null;
 
   return (

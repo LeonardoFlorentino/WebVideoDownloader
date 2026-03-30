@@ -26,13 +26,60 @@ import { getMainUrls, removeMainUrlById } from "../../service/downloadsService";
 import type { MainUrl } from "../../service/downloadsService";
 import { baixarVideoTauri } from "../../service/baixarVideo";
 // import { pausarDownloadTauri } from "../../service/pausarDownload";
-import { resumeDownloadTauri } from "../../service/resumeDownload";
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { pollDownloadsProgress } from "../../service/downloadsService";
 
 type HomeProps = { username: string };
 function Home({ username }: HomeProps) {
+      // Iniciar download individual
+      const handleStartDownload = (id: number) => {
+        const d = downloads.find((x) => x.id === id);
+        if (!d || !username) return;
+        setDownloads((ds) =>
+          ds.map((x) => (x.id === id ? { ...x, status: "baixando" } : x))
+        );
+        // Garante extensão .mp4
+        const filename = d.filename.endsWith(".mp4") ? d.filename : `${d.filename}.mp4`;
+        baixarVideoTauri(
+          String(d.id),
+          username,
+          d.url,
+          `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${filename}`
+        ).catch((err) => {
+          setDownloads((ds) =>
+            ds.map((x) =>
+              x.id === id ? { ...x, status: "erro", progress: 0 } : x
+            )
+          );
+          toast.error(`Erro ao baixar: ${filename}\n${err}`);
+        });
+      };
+    // Estado para modal de edição
+    const [editModalOpenId, setEditModalOpenId] = useState<number | null>(null);
+    const [editFilename, setEditFilename] = useState("");
+    const [editUrl, setEditUrl] = useState("");
+
+    // Abrir modal de edição para um cartão específico
+    const openEditModal = (download: Download) => {
+      setEditModalOpenId(download.id);
+      setEditFilename(download.filename);
+      setEditUrl(download.url);
+    };
+
+    // Salvar edição
+    const handleEditSave = (filename: string, url: string) => {
+      setDownloads((prev) =>
+        prev.map((d) =>
+          d.id === editModalOpenId ? { ...d, filename, url } : d
+        )
+      );
+      setEditModalOpenId(null);
+    };
+
+    // Cancelar edição
+    const handleEditCancel = () => {
+      setEditModalOpenId(null);
+    };
   const [url, setUrl] = useState("");
   const { downloads, setDownloads } = useDownloads() as {
     downloads: Download[];
@@ -40,7 +87,6 @@ function Home({ username }: HomeProps) {
   };
   const [filename, setFilename] = useState("");
   const [downloadingAll, setDownloadingAll] = useState(false);
-  const [pausando, setPausando] = useState<{ [url: string]: boolean }>({});
   const [pollingAtivo, setPollingAtivo] = useState(false);
   const navigate = useNavigate();
   const downloadsRef = useRef(downloads);
@@ -159,7 +205,6 @@ function Home({ username }: HomeProps) {
           setDownloads((ds) =>
             ds.map((d) => (d.url === url ? { ...d, status: "pausado" } : d)),
           );
-          setPausando((prev) => ({ ...prev, [url]: false }));
         },
       );
     })();
@@ -176,7 +221,7 @@ function Home({ username }: HomeProps) {
     const interval = setInterval(async () => {
       // Só faz polling se houver downloads realmente ativos
       const ativos = downloads.filter(
-        (d) => d.status === "baixando" || d.status === "pausado"
+        (d) => d.status === "baixando" || d.status === "pausado",
       );
       if (ativos.length === 0) {
         // Se todos os downloads estão concluídos, encerra o polling
@@ -287,60 +332,6 @@ function Home({ username }: HomeProps) {
     setDownloadingAll(false);
   };
 
-  // Novo handleDownload para pause/resume/stop
-  const handleDownload = async (id: number, action?: "pause" | "resume") => {
-    setPollingAtivo(true); // Ativa polling/logs ao baixar individual
-    const d = downloads.find((x: Download) => x.id === id);
-    if (!d) return;
-    const filename = d.filename.endsWith(".mp4")
-      ? d.filename
-      : `${d.filename}.mp4`;
-    const savePath = `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${filename}`;
-    if (action === "pause") {
-      setPausando((prev) => ({ ...prev, [d.url]: true }));
-      try {
-        await invoke("integrated_pause_download", {
-          id: String(d.id),
-          url: d.url,
-        });
-        setPausando((prev) => ({ ...prev, [d.url]: false }));
-      } catch {
-        setPausando((prev) => ({ ...prev, [d.url]: false }));
-        toast.error("Erro ao pausar download");
-      }
-      return;
-    }
-    if (action === "resume") {
-      setDownloads((ds: Download[]) =>
-        ds.map((x: Download) =>
-          x.id === id ? { ...x, status: "baixando" } : x,
-        ),
-      );
-      resumeDownloadTauri(String(d.id), username, d.url, savePath).catch(() => {
-        setDownloads((ds: Download[]) =>
-          ds.map((x: Download) =>
-            x.id === id ? { ...x, status: "erro", progress: 0 } : x,
-          ),
-        );
-        toast.error("Erro ao retomar download");
-      });
-      return;
-    }
-    // Download normal
-    setDownloads((ds: Download[]) =>
-      ds.map((x: Download) => (x.id === id ? { ...x, status: "baixando" } : x)),
-    );
-    try {
-      await baixarVideoTauri(String(d.id), username, d.url, savePath);
-    } catch (err) {
-      setDownloads((ds: Download[]) =>
-        ds.map((x: Download) =>
-          x.id === id ? { ...x, status: "erro", progress: 0 } : x,
-        ),
-      );
-      toast.error(`Erro ao baixar vídeo: ${err}`);
-    }
-  };
 
   const handleLogout = () => {
     // Aqui você pode limpar o token/autenticação se necessário
@@ -374,19 +365,20 @@ function Home({ username }: HomeProps) {
           await addMainUrl(username, url, safeFilename);
           const newUrls = await getMainUrls(username);
           setDownloads(
-            (
-              newUrls as (MainUrl & { id?: number; progress?: number })[]
-            ).map((item, idx2) => ({
-              id: item.id ?? idx2 + 1,
-              url: item.url,
-              filename: item.filename || `video_${idx2 + 1}`,
-              ext: "mp4",
-              progress: typeof (item as { progress?: number }).progress === "number"
-                ? (item as { progress?: number }).progress!
-                : 0,
-              status: item.status || "pendente",
-              canceled: false,
-            }))
+            (newUrls as (MainUrl & { id?: number; progress?: number })[]).map(
+              (item, idx2) => ({
+                id: item.id ?? idx2 + 1,
+                url: item.url,
+                filename: item.filename || `video_${idx2 + 1}`,
+                ext: "mp4",
+                progress:
+                  typeof (item as { progress?: number }).progress === "number"
+                    ? (item as { progress?: number }).progress!
+                    : 0,
+                status: item.status || "pendente",
+                canceled: false,
+              }),
+            ),
           );
           setUrl("");
           setFilename(""); // Limpa o campo de nome após adicionar
@@ -456,10 +448,15 @@ function Home({ username }: HomeProps) {
           <DownloadCard
             key={d.id}
             download={d}
-            onDownload={handleDownload}
             onRemove={handleRemove}
             onOpenFolder={() => openDownloadFolder("")}
-            pausando={!!pausando[d.url]}
+            onStartDownload={handleStartDownload}
+            editModalOpen={editModalOpenId === d.id}
+            editFilename={editFilename}
+            editUrl={editUrl}
+            openEditModal={() => openEditModal(d)}
+            handleEditSave={handleEditSave}
+            handleEditCancel={handleEditCancel}
           />
         ))}
       </DownloadList>
