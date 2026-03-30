@@ -97,7 +97,8 @@ fn find_user_mut<'a>(user_list: &'a mut UserList, username: &str) -> Option<&'a 
 }
 
 fn find_main_url_mut<'a>(user: &'a mut crate::backend::user::User, url: &str) -> Option<&'a mut MainUrl> {
-    user.main_urls.iter_mut().find(|mu| mu.url == url)
+    let base_url = url.split('?').next().unwrap_or(url);
+    user.main_urls.iter_mut().find(|mu| mu.url.split('?').next().unwrap_or(&mu.url) == base_url)
 }
 
 pub fn update_main_url_title(username: String, old_url: String, new_url: String, new_filename: String) -> Result<(), String> {

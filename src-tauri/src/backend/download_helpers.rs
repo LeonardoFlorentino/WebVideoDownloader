@@ -206,57 +206,92 @@ pub fn download_hls_file(
         return Err("Arquivo HLS criado mas está vazio".to_string());
     }
 
-    // Pós-processamento: remuxar para MP4 real usando FFmpeg
-    let ffmpeg_status = Command::new("ffmpeg")
-        .args(&["-y", "-i", temp_dest.to_str().unwrap(), "-c", "copy", dest_path.to_str().unwrap()])
-        .status();
-    match ffmpeg_status {
-        Ok(status) if status.success() => {
-            // Remove arquivo temporário .ts
-            let _ = std::fs::remove_file(&temp_dest);
-        }
-        Ok(status) => {
-            return Err(format!("FFmpeg falhou com código {} ao remuxar para MP4", status));
-        }
-        Err(e) => {
-            return Err(format!("Erro ao executar FFmpeg: {}", e));
-        }
-    }
-    // Atualiza status para concluido e emite evento de finalização
-    // Atualiza progresso persistente
-    let progress = crate::backend::download_progress::DownloadProgress {
-        url: m3u8_url.to_string(),
-        filename: dest_path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string(),
-        total_size: bytes_downloaded,
-        downloaded: bytes_downloaded,
-        status: "concluído".to_string(),
-        id: Some(id_value),
-    };
-    crate::backend::download_progress::update_progress(m3u8_url, progress.clone());
-    // Atualiza user.json (main_urls) também
-    // username deve ser passado corretamente para esta função!
+    // Sinaliza para o frontend que está convertendo
     if let Some(w) = window {
-        // Usa username propagado corretamente
-        if let Some(username) = username {
-            if let Err(e) = crate::backend::user_service::update_main_url_progress(
-                username.to_string(),
-                m3u8_url.to_string(),
-                1.0,
-            ) {
-                println!("[BACKEND][ERRO] Falha ao atualizar main_url_progress para usuário '{}': {}", username, e);
-            }
-        }
         let _ = w.emit("download-progress", serde_json::json!({
             "id": id_value,
             "progress": bytes_downloaded,
             "total": bytes_downloaded,
-            "status": "concluído"
+            "status": "convertendo"
         }));
-        let _ = w.emit("download_finished", serde_json::json!({
-            "url": m3u8_url,
-            "filename": dest_path.file_name().and_then(|n| n.to_str()).unwrap_or(""),
-            "status": "concluído"
-        }));
+    }
+
+
+    // Canal para comunicação entre thread e principal
+    use std::sync::mpsc;
+    let (tx, rx) = mpsc::channel();
+    let temp_dest_clone = temp_dest.clone();
+    let dest_path_clone = dest_path.to_path_buf();
+    let dest_path_for_thread = dest_path_clone.clone();
+    let m3u8_url_clone = m3u8_url.to_string();
+    let id_value_clone = id_value;
+    std::thread::spawn(move || {
+        let ffmpeg_status = Command::new("ffmpeg")
+            .args(&["-y", "-i", temp_dest_clone.to_str().unwrap(), "-c", "copy", dest_path_for_thread.to_str().unwrap()])
+            .status();
+        let result = match ffmpeg_status {
+            Ok(status) if status.success() => {
+                let _ = std::fs::remove_file(&temp_dest_clone);
+                Ok(())
+            }
+            Ok(status) => {
+                println!("[BACKEND][ERRO] FFmpeg falhou com código {} ao remuxar para MP4", status);
+                Err(format!("FFmpeg falhou com código {}", status))
+            }
+            Err(e) => {
+                println!("[BACKEND][ERRO] Erro ao executar FFmpeg: {}", e);
+                Err(format!("Erro ao executar FFmpeg: {}", e))
+            }
+        };
+        // Envia resultado para thread principal
+        let _ = tx.send(result);
+    });
+
+    // Aguarda thread terminar (não trava GUI pois backend não é a thread do GUI)
+    // Se quiser não bloquear, pode usar async ou spawn_blocking
+    match rx.recv() {
+        Ok(Ok(())) => {
+            // Sucesso: atualiza progresso, user.json e emite eventos
+            let progress = crate::backend::download_progress::DownloadProgress {
+                url: m3u8_url_clone.clone(),
+                filename: dest_path_clone.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string(),
+                total_size: bytes_downloaded,
+                downloaded: bytes_downloaded,
+                status: "concluído".to_string(),
+                id: Some(id_value_clone),
+            };
+            crate::backend::download_progress::update_progress(&m3u8_url_clone, progress.clone());
+            if let Some(w) = window {
+                // Atualiza user.json (main_urls) também
+                if let Some(username) = username {
+                    if let Err(e) = crate::backend::user_service::update_main_url_progress(
+                        username.to_string(),
+                        m3u8_url_clone.clone(),
+                        1.0,
+                    ) {
+                        println!("[BACKEND][ERRO] Falha ao atualizar main_url_progress para usuário: {}", e);
+                    }
+                }
+                let _ = w.emit("download-progress", serde_json::json!({
+                    "id": id_value_clone,
+                    "progress": bytes_downloaded,
+                    "total": bytes_downloaded,
+                    "status": "concluído"
+                }));
+                let _ = w.emit("download_finished", serde_json::json!({
+                    "url": m3u8_url_clone,
+                    "filename": dest_path_clone.file_name().and_then(|n| n.to_str()).unwrap_or(""),
+                    "status": "concluído"
+                }));
+            }
+        }
+        Ok(Err(e)) => {
+            println!("[BACKEND][ERRO] Falha na conversão FFmpeg: {}", e);
+            // Aqui pode emitir evento de erro se desejar
+        }
+        Err(e) => {
+            println!("[BACKEND][ERRO] Falha ao receber resultado da thread FFmpeg: {}", e);
+        }
     }
     Ok(())
 }

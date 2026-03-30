@@ -29,7 +29,6 @@ import { baixarVideoTauri } from "../../service/baixarVideo";
 import { resumeDownloadTauri } from "../../service/resumeDownload";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { listDownloadedVideos } from "../../lib/listVideos";
 import { pollDownloadsProgress } from "../../service/downloadsService";
 
 type HomeProps = { username: string };
@@ -133,17 +132,23 @@ function Home({ username }: HomeProps) {
         const { url, status, error } = event.payload;
         setDownloads((ds) =>
           ds.map((d) => {
+            // Só atualiza se:
+            // - a url bater
+            // - o status atual for 'baixando' (ou seja, só quem estava baixando pode ser concluído)
             if (d.url !== url) return d;
-            // Se o status atual for 'pausado', não sobrescreva para 'concluído'
             if (d.status === "pausado") {
               return { ...d, error: error || undefined };
             }
-            return {
-              ...d,
-              status: status === "concluido" ? "concluído" : status,
-              progress: status === "concluido" ? 100 : d.progress,
-              error: error || undefined,
-            };
+            if (d.status === "baixando") {
+              return {
+                ...d,
+                status: status === "concluido" ? "concluído" : status,
+                progress: status === "concluido" ? 100 : d.progress,
+                error: error || undefined,
+              };
+            }
+            // Não altera cartões que não estavam baixando
+            return d;
           }),
         );
       });
@@ -169,9 +174,9 @@ function Home({ username }: HomeProps) {
   useEffect(() => {
     if (!pollingAtivo) return;
     const interval = setInterval(async () => {
-      // Só faz polling se houver downloads ativos
+      // Só faz polling se houver downloads realmente ativos
       const ativos = downloads.filter(
-        (d) => d.status === "baixando" || d.status === "pendente",
+        (d) => d.status === "baixando" || d.status === "pausado"
       );
       if (ativos.length === 0) {
         // Se todos os downloads estão concluídos, encerra o polling
@@ -227,39 +232,8 @@ function Home({ username }: HomeProps) {
           return;
         }
       }
-      // Recarrega a lista do backend após remover
-      const urls = await getMainUrls(username);
-      const baixados = await import("../../lib/listVideos").then((m) =>
-        m.listDownloadedVideos(),
-      );
-      setDownloads(
-        (urls as MainUrl[]).map((item, idx) => {
-          const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
-          const baixado = baixados.find((b: { name: string }) => {
-            const nomeSemExtNorm = nomeSemExt
-              .toLowerCase()
-              .normalize("NFD")
-              .replace(/[^\w\s]/g, "");
-            const baixadoSemExtNorm = b.name
-              .replace(/\.[^/.]+$/, "")
-              .toLowerCase()
-              .normalize("NFD")
-              .replace(/[^\w\s]/g, "");
-            return baixadoSemExtNorm === nomeSemExtNorm;
-          });
-          const status = baixado ? "concluído" : "pendente";
-          const progress = baixado ? 100 : 0;
-          return {
-            id: item.id,
-            url: item.url,
-            filename: item.filename || `video_${idx + 1}`,
-            ext: "mp4",
-            progress,
-            status,
-            canceled: false,
-          };
-        }),
-      );
+      // Remove apenas o item excluído do estado local
+      setDownloads((prev) => prev.filter((d) => d.id !== id));
     } catch (err) {
       let msg = "Erro ao remover vídeo.";
       if (
@@ -399,35 +373,23 @@ function Home({ username }: HomeProps) {
               : `video_${idx + 1}.mp4`;
           await addMainUrl(username, url, safeFilename);
           const newUrls = await getMainUrls(username);
-          const baixados = await listDownloadedVideos();
           setDownloads(
             (
-              newUrls as { url: string; filename: string; status?: string }[]
-            ).map((item, idx2) => {
-              const nomeSemExt = item.filename.replace(/\.[^/.]+$/, "");
-              const baixado = baixados.find((b) => {
-                const nomeSemExtNorm = nomeSemExt
-                  .toLowerCase()
-                  .normalize("NFD")
-                  .replace(/[^\w\s]/g, "");
-                const baixadoSemExtNorm = b.name
-                  .replace(/\.[^/.]+$/, "")
-                  .toLowerCase()
-                  .normalize("NFD")
-                  .replace(/[^\w\s]/g, "");
-                return baixadoSemExtNorm === nomeSemExtNorm;
-              });
-              return {
-                id: Date.now() + idx2,
-                url: item.url,
-                filename: item.filename || `video_${idx2 + 1}`,
-                ext: "mp4",
-                progress: baixado ? 100 : 0,
-                status: item.status || (baixado ? "concluído" : "pendente"),
-                canceled: false,
-              };
-            }),
+              newUrls as (MainUrl & { id?: number; progress?: number })[]
+            ).map((item, idx2) => ({
+              id: item.id ?? idx2 + 1,
+              url: item.url,
+              filename: item.filename || `video_${idx2 + 1}`,
+              ext: "mp4",
+              progress: typeof (item as { progress?: number }).progress === "number"
+                ? (item as { progress?: number }).progress!
+                : 0,
+              status: item.status || "pendente",
+              canceled: false,
+            }))
           );
+          setUrl("");
+          setFilename(""); // Limpa o campo de nome após adicionar
         },
       );
     } catch {

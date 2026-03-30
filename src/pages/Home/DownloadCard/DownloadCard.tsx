@@ -69,7 +69,9 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
           </CardStatus>
         </CardUrlAndStatus>
       </CardTopRow>
-      <CardProgressBar style={{ position: "relative", height: 24, marginTop: 8 }}>
+      <CardProgressBar
+        style={{ position: "relative", height: 24, marginTop: 8 }}
+      >
         <CardProgressTrack style={{ height: 24 }}>
           <CardProgressFill
             $status={download.status}
@@ -103,10 +105,10 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
           }}
         >
           {isConcluido
-            ? "100.0%"
+            ? "100%"
             : download.status === "pausado"
-              ? `${progressPercent.toFixed(1)}% (Pausado)`
-              : `${progressPercent.toFixed(1)}%`}
+              ? `${Math.round(progressPercent)}% (Pausado)`
+              : `${Math.round(progressPercent)}%`}
         </span>
       </CardProgressBar>
       <CardActions>

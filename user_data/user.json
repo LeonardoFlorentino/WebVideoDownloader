@@ -12,25 +12,18 @@
       "playlists": [],
       "main_urls": [
         {
-          "id": 2,
+          "id": 1,
           "url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
-          "filename": "video_2.mp4",
-          "status": "concluído",
-          "progress": 1.0
-        },
-        {
-          "id": 3,
-          "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
-          "filename": "video_2.mp4",
-          "status": "concluído",
-          "progress": 1.0
-        },
-        {
-          "id": 4,
-          "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/playlist.m3u8?uf085lum5fbz=arbrhj29dqup89",
-          "filename": "video_3.mp4",
+          "filename": "Praia",
           "status": "pendente",
           "progress": null
+        },
+        {
+          "id": 2,
+          "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+          "filename": "Oceano",
+          "status": "concluído",
+          "progress": 1.0
         }
       ]
     },
