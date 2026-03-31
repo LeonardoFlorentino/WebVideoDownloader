@@ -60,6 +60,8 @@ pub fn remove_main_url(username: String, url: String) -> Result<(), String> {
     if user.main_urls.len() == original_len {
         return Err("URL não encontrada para remoção".to_string());
     }
+    // Remove progresso persistido também
+    crate::backend::download_progress::remove_progress(url_trimmed);
     write_user_list(&path, &user_list)?;
     Ok(())
 }
@@ -166,9 +168,15 @@ pub fn remove_main_url_by_id(username: String, id: u64) -> Result<(), String> {
     let mut user_list = read_user_list(&path)?;
     let user = find_user_mut(&mut user_list, &username).ok_or("Usuário não encontrado")?;
     let original_len = user.main_urls.len();
+    // Captura a URL antes de remover
+    let url_to_remove = user.main_urls.iter().find(|mu| mu.id == id).map(|mu| mu.url.clone());
     user.main_urls.retain(|mu| mu.id != id);
     if user.main_urls.len() == original_len {
         return Err("ID não encontrado para remoção".to_string());
+    }
+    // Remove progresso persistido também
+    if let Some(url) = url_to_remove {
+        crate::backend::download_progress::remove_progress(&url);
     }
     write_user_list(&path, &user_list)?;
     Ok(())

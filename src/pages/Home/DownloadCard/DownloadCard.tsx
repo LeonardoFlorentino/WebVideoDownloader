@@ -15,6 +15,7 @@ import {
   CardUrlAndStatus,
   PauseButton,
   ResumeButton,
+  DownloadButton,
 } from "./DownloadCard.styles";
 
 import type { Download } from "@/types/download";
@@ -54,44 +55,19 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
       ? Math.min((download.progress / download.total) * 100, 100)
       : Math.min(download.progress * 100, 100);
 
-  // Helper for status label (Portuguese + backend value)
-  const statusMap: Record<string, string> = {
-    preparando: "Preparando",
-    calculando: "Calculando",
-    baixando: "Baixando",
-    pausado: "Pausado",
-    concluído: "Concluído",
-    concluido: "Concluído",
-    erro: "Erro",
-    pendente: "Pendente",
-  };
-  let statusLabel = statusMap[download.status] || download.status;
-  if (statusLabel.toLowerCase() !== download.status.toLowerCase()) {
-    statusLabel = `${statusLabel} (${download.status})`;
-  }
+  // Exibe o status exatamente como recebido do backend
+  const statusLabel = download.status;
 
-  // Helper para label de progresso (em português)
-  let progressLabel = "";
-  if (
-    (download.status === "preparando" || download.status === "calculando") && (!download.progress || download.progress === 0)
-  ) {
-    progressLabel = "0%";
-  } else if (
-    download.status === "concluído" ||
-    download.status === "concluido"
-  ) {
-    progressLabel = "100%";
-  } else if (download.status === "pausado") {
-    progressLabel = `${Math.round(progressPercent)}% (Pausado)`;
-  } else {
-    progressLabel = `${Math.round(progressPercent)}%`;
-  }
+  // Progresso: sempre mostra o valor bruto, sem inferência local
+  const progressLabel = `${Math.round(progressPercent)}%`;
 
   return (
     <CardContainer>
       <CardTopRow>
         <CardFileInfo>
-          <span style={{ fontWeight: 600, marginRight: 8 }}>{download.filename}</span>
+          <span style={{ fontWeight: 600, marginRight: 8 }}>
+            {download.filename}
+          </span>
         </CardFileInfo>
         <CardUrlAndStatus>
           <CardUrlText>{download.url}</CardUrlText>
@@ -142,33 +118,13 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
       <CardActions>
         {/* Botão dinâmico: baixar, pausar, continuar */}
         {download.status === "pendente" && (
-          <button
-            type="button"
-            onClick={() => onDownload(download.id)}
-            style={{
-              background: "#6c63ff",
-              color: "#fff",
-              border: "none",
-              borderRadius: 6,
-              padding: "6px 16px",
-              fontWeight: 500,
-              cursor: "pointer",
-              opacity: 1,
-              transition: "background 0.2s",
-              outline: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              fontSize: 16,
-              letterSpacing: 0.2,
-              minWidth: 90,
-            }}
-          >
+          <DownloadButton type="button" onClick={() => onDownload(download.id)}>
             Baixar
-          </button>
+          </DownloadButton>
         )}
-        {(download.status === "baixando" || download.status === "preparando" || download.status === "convertendo") && (
+        {(download.status === "baixando" ||
+          download.status === "preparando" ||
+          download.status === "convertendo") && (
           <PauseButton
             type="button"
             onClick={() => onDownload(download.id, "pause")}

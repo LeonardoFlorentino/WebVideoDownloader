@@ -169,3 +169,19 @@ export const OpenFolderButton = styled.button`
     background: #554fd1;
   }
 `;
+
+export const DownloadButton = styled.button`
+  background: #6c63ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 4px 0 #0002;
+  transition: background 0.2s;
+  outline: none;
+  &:hover {
+    background: #554fd1;
+  }
+`;

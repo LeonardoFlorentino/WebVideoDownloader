@@ -1,27 +1,19 @@
 {
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/543od29lxgnmb4p/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/543od29lxgnmb4p/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
-    "filename": "Aula 5 - Verbos (Defectivos ou Deponentes).mp4",
-    "total_size": 371860992,
-    "downloaded": 371860992,
-    "status": "concluído",
-    "id": 3
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/0eb4390i3042f32/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/0eb4390i3042f32/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
-    "filename": "Aula 3 - Pronomes (Pessoais e Possessivos).mp4",
-    "total_size": 486758696,
-    "downloaded": 486758696,
-    "status": "concluído",
-    "id": 1
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/w0ng3g8f3126g9a/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/w0ng3g8f3126g9a/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "AULA 02 - A INSPIRAÇÃO BÍBLICA.mp4",
-    "total_size": 553646464,
-    "downloaded": 553646464,
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/g61h286t220iiy3/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/g61h286t220iiy3/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
+    "filename": "Aula 2 - Preposições Gregas.mp4",
+    "total_size": 623349532,
+    "downloaded": 623349532,
     "status": "concluído",
     "id": 2
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/1mt6j2wdwu0c87s/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/1mt6j2wdwu0c87s/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
+    "filename": "video_1.mp4",
+    "total_size": 362252124,
+    "downloaded": 362252124,
+    "status": "concluído",
+    "id": 1
   },
   "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8": {
     "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
@@ -31,28 +23,36 @@
     "status": "pausado",
     "id": 3
   },
-  "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=2042000.m3u8": {
-    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=2042000.m3u8",
-    "filename": "video_3.mp4",
-    "total_size": 32245384,
-    "downloaded": 32245384,
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/knnk1a373ltbbl7/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/knnk1a373ltbbl7/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 7 - Segundo Aoristo.mp4",
+    "total_size": 329972900,
+    "downloaded": 329972900,
     "status": "concluído",
-    "id": 3
+    "id": 5
   },
-  "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4": {
-    "url": "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/oqx9vjbloc4nysb/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/oqx9vjbloc4nysb/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
     "filename": "video_1.mp4",
-    "total_size": 0,
-    "downloaded": 0,
-    "status": "pausado",
-    "id": null
+    "total_size": 1081654052,
+    "downloaded": 1081654052,
+    "status": "concluído",
+    "id": 1
   },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/99f1jorny7k2zq0/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/99f1jorny7k2zq0/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "AULA 01 - O QUE A BÍBLIA É PARA MIM?.mp4",
-    "total_size": 459718280,
-    "downloaded": 0,
-    "status": "pausado",
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/3jpf3by267421mn/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/3jpf3by267421mn/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 6 - Futuro do Indicativo.mp4",
+    "total_size": 721336636,
+    "downloaded": 721336636,
+    "status": "concluído",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/31vr41o65p25gyv/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=f59vo16k8zy3": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/31vr41o65p25gyv/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=f59vo16k8zy3",
+    "filename": "Aula 9 - Primeira Declinação.mp4",
+    "total_size": 310766820,
+    "downloaded": 310766820,
+    "status": "concluído",
     "id": 1
   },
   "https://br2.eadconvergencia.com.br/course/view.php?id=327&section=4": {
@@ -63,75 +63,11 @@
     "status": "pausado",
     "id": null
   },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/playlist.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/playlist.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "Aula 1 - A História da Língua Grega.mp4",
-    "total_size": 781654011,
-    "downloaded": 781654011,
-    "status": "concluído",
-    "id": 2
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/14n12f8q8wjijn5/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/14n12f8q8wjijn5/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "Aula 5 - Presente do Indicativo e Subjuntivo.mp4",
-    "total_size": 1407170600,
-    "downloaded": 1407170600,
-    "status": "concluído",
-    "id": 3
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/gq413a36ztpx23j/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/gq413a36ztpx23j/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
-    "filename": "Aula 4 - Pronomes (Demonstrativos e Relativos).mp4",
-    "total_size": 394563308,
-    "downloaded": 394563308,
-    "status": "concluído",
-    "id": 2
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/31vr41o65p25gyv/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=f59vo16k8zy3": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/31vr41o65p25gyv/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=f59vo16k8zy3",
-    "filename": "Aula 9 - Primeira Declinação.mp4",
-    "total_size": 310766820,
-    "downloaded": 310766820,
-    "status": "concluído",
-    "id": 1
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/7ji6s1ozla0h120/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/7ji6s1ozla0h120/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "Aula 4 - Introdução aos Verbos Gregos.mp4",
-    "total_size": 698810664,
-    "downloaded": 698810664,
-    "status": "concluído",
-    "id": 2
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/kor25k8zl6m5cuy/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/kor25k8zl6m5cuy/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
-    "filename": "Aula 6 - Introdução ao Aoristo.mp4",
-    "total_size": 354895872,
-    "downloaded": 354895872,
-    "status": "concluído",
-    "id": 4
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/3jpf3by267421mn/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/3jpf3by267421mn/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "Aula 6 - Futuro do Indicativo.mp4",
-    "total_size": 721336636,
-    "downloaded": 721336636,
-    "status": "concluído",
-    "id": 1
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/50rt1k1xison318/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/50rt1k1xison318/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "Aula 3 - Sílabas, Acentos e Sinais.mp4",
-    "total_size": 3678724592,
-    "downloaded": 3678724592,
-    "status": "concluído",
-    "id": 1
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/h3pm46m2fvs0v4a/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/h3pm46m2fvs0v4a/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "Aula 1 - Introdução aos Adjetivos Gregos.mp4",
-    "total_size": 413996680,
-    "downloaded": 413996680,
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/w0ng3g8f3126g9a/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/w0ng3g8f3126g9a/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "video_1.mp4",
+    "total_size": 553646464,
+    "downloaded": 553646464,
     "status": "concluído",
     "id": 1
   },
@@ -143,6 +79,134 @@
     "status": "baixando",
     "id": null
   },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/0kvh72if1uq6i1h/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/0kvh72if1uq6i1h/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "video_1.mp4",
+    "total_size": 292030364,
+    "downloaded": 292030364,
+    "status": "concluído",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/gq413a36ztpx23j/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/gq413a36ztpx23j/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
+    "filename": "Aula 4 - Pronomes (Demonstrativos e Relativos).mp4",
+    "total_size": 394563308,
+    "downloaded": 394563308,
+    "status": "concluído",
+    "id": 2
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/yir3l5s16o2uhb0/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/yir3l5s16o2uhb0/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
+    "filename": "video_1.mp4",
+    "total_size": 466208040,
+    "downloaded": 466208040,
+    "status": "concluído",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/543od29lxgnmb4p/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/543od29lxgnmb4p/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
+    "filename": "Aula 5 - Verbos (Defectivos ou Deponentes).mp4",
+    "total_size": 371860992,
+    "downloaded": 371860992,
+    "status": "concluído",
+    "id": 3
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/7ji6s1ozla0h120/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/7ji6s1ozla0h120/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 4 - Introdução aos Verbos Gregos.mp4",
+    "total_size": 698810664,
+    "downloaded": 698810664,
+    "status": "concluído",
+    "id": 2
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/50rt1k1xison318/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/50rt1k1xison318/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 3 - Sílabas, Acentos e Sinais.mp4",
+    "total_size": 3678724592,
+    "downloaded": 3678724592,
+    "status": "concluído",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/htvn63sfdcdp15j/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/htvn63sfdcdp15j/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "video_1.mp4",
+    "total_size": 344868516,
+    "downloaded": 344868516,
+    "status": "concluído",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/3o2nt490hib7512/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/3o2nt490hib7512/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 7 - Introdução aos Substantivos.mp4",
+    "total_size": 1098603944,
+    "downloaded": 1098603944,
+    "status": "concluído",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/h3pm46m2fvs0v4a/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/h3pm46m2fvs0v4a/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 1 - Introdução aos Adjetivos Gregos.mp4",
+    "total_size": 413996680,
+    "downloaded": 413996680,
+    "status": "concluído",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/kor25k8zl6m5cuy/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/kor25k8zl6m5cuy/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
+    "filename": "Aula 6 - Introdução ao Aoristo.mp4",
+    "total_size": 354895872,
+    "downloaded": 354895872,
+    "status": "concluído",
+    "id": 4
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/epl4091dsmokjbq/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/epl4091dsmokjbq/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
+    "filename": "video_1.mp4",
+    "total_size": 754913436,
+    "downloaded": 754913436,
+    "status": "concluído",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/gt4aumb9966j612/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/gt4aumb9966j612/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "video_1.mp4",
+    "total_size": 0,
+    "downloaded": 0,
+    "status": "pausado",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/99f1jorny7k2zq0/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/99f1jorny7k2zq0/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "AULA 01 - O QUE A BÍBLIA É PARA MIM?.mp4",
+    "total_size": 459718280,
+    "downloaded": 0,
+    "status": "pausado",
+    "id": 1
+  },
+  "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=2042000.m3u8": {
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=2042000.m3u8",
+    "filename": "video_3.mp4",
+    "total_size": 32245384,
+    "downloaded": 32245384,
+    "status": "concluído",
+    "id": 3
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/0eb4390i3042f32/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/0eb4390i3042f32/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
+    "filename": "Aula 3 - Pronomes (Pessoais e Possessivos).mp4",
+    "total_size": 486758696,
+    "downloaded": 486758696,
+    "status": "concluído",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/playlist.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/playlist.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 1 - A História da Língua Grega.mp4",
+    "total_size": 781654011,
+    "downloaded": 781654011,
+    "status": "concluído",
+    "id": 2
+  },
   "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/z3o3j4foa9ce6b0/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
     "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/z3o3j4foa9ce6b0/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
     "filename": "Aula 8 - Segunda Declinação.mp4",
@@ -151,11 +215,11 @@
     "status": "concluído",
     "id": 2
   },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/3o2nt490hib7512/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/3o2nt490hib7512/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "Aula 7 - Introdução aos Substantivos.mp4",
-    "total_size": 1098603944,
-    "downloaded": 1098603944,
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/j65oyzhofw7mfy4/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/j65oyzhofw7mfy4/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "video_1.mp4",
+    "total_size": 204632360,
+    "downloaded": 204632360,
     "status": "concluído",
     "id": 1
   },
@@ -167,20 +231,20 @@
     "status": "concluído",
     "id": 3
   },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/knnk1a373ltbbl7/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/knnk1a373ltbbl7/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "Aula 7 - Segundo Aoristo.mp4",
-    "total_size": 329972900,
-    "downloaded": 329972900,
-    "status": "concluído",
-    "id": 5
+  "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4": {
+    "url": "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
+    "filename": "video_1.mp4",
+    "total_size": 0,
+    "downloaded": 0,
+    "status": "pausado",
+    "id": null
   },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/g61h286t220iiy3/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/g61h286t220iiy3/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
-    "filename": "Aula 2 - Preposições Gregas.mp4",
-    "total_size": 623349532,
-    "downloaded": 623349532,
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/14n12f8q8wjijn5/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/14n12f8q8wjijn5/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 5 - Presente do Indicativo e Subjuntivo.mp4",
+    "total_size": 1407170600,
+    "downloaded": 1407170600,
     "status": "concluído",
-    "id": 2
+    "id": 3
   }
 }

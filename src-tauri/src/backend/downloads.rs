@@ -6,6 +6,7 @@ use crate::backend::download_pause_monitor::start_pause_monitor;
 use crate::backend::download_progress::{DownloadProgress, update_progress, remove_progress};
 use tokio::runtime::Runtime;
 use crate::backend::download_helpers::{open_file_append, seek_file_end};
+use tauri::Emitter;
 // use std::path::PathBuf;
 
 pub fn baixar_video_emit(window: Option<&Window>, url: &str, _filename: &str) -> Result<(), String> {
@@ -14,6 +15,16 @@ pub fn baixar_video_emit(window: Option<&Window>, url: &str, _filename: &str) ->
         // log removido
     let should_stop = Arc::new(AtomicBool::new(false));
     let url_string = url.to_string();
+    // Emite status 'preparando' imediatamente ao iniciar
+    let preparing_json = serde_json::json!({
+        "id": 0,
+        "progress": 0u64,
+        "total": 0u64,
+        "status": "preparando"
+    });
+    if let Some(w) = window {
+        let _ = w.emit("download-progress", preparing_json.clone());
+    }
     // Ao iniciar novo download, só defina status 'baixando' se NÃO estiver pausado
     let mut path = crate::backend::filesystem::get_project_root();
     path.push("Vídeos baixados");

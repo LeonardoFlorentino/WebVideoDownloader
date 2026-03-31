@@ -18,6 +18,8 @@ export async function pollDownloadsProgress(
           (result as any).data
         ) {
           const data = (result as any).data;
+          // Log para depuração
+          console.log("[pollDownloadsProgress] url:", d.url, "status recebido:", data.status, data);
           return {
             ...d,
             progress:
@@ -31,7 +33,9 @@ export async function pollDownloadsProgress(
             status: data.status || d.status,
           };
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[pollDownloadsProgress] erro ao buscar progresso para", d.url, e);
+      }
       return d;
     }),
   );
