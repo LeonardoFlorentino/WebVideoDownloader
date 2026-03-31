@@ -4,7 +4,6 @@ import { EditDownloadModal } from "../../../components/EditDownloadModal";
 import {
   CardContainer,
   CardFileInfo,
-  CardFileExt,
   CardUrlText,
   CardProgressBar,
   CardProgressTrack,
@@ -55,20 +54,48 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
       ? Math.min((download.progress / download.total) * 100, 100)
       : Math.min(download.progress * 100, 100);
 
-  // (Removido: isConcluido não utilizado)
+  // Helper for status label (Portuguese + backend value)
+  const statusMap: Record<string, string> = {
+    preparando: "Preparando",
+    calculando: "Calculando",
+    baixando: "Baixando",
+    pausado: "Pausado",
+    concluído: "Concluído",
+    concluido: "Concluído",
+    erro: "Erro",
+    pendente: "Pendente",
+  };
+  let statusLabel = statusMap[download.status] || download.status;
+  if (statusLabel.toLowerCase() !== download.status.toLowerCase()) {
+    statusLabel = `${statusLabel} (${download.status})`;
+  }
+
+  // Helper para label de progresso (em português)
+  let progressLabel = "";
+  if (
+    (download.status === "preparando" || download.status === "calculando") && (!download.progress || download.progress === 0)
+  ) {
+    progressLabel = "0%";
+  } else if (
+    download.status === "concluído" ||
+    download.status === "concluido"
+  ) {
+    progressLabel = "100%";
+  } else if (download.status === "pausado") {
+    progressLabel = `${Math.round(progressPercent)}% (Pausado)`;
+  } else {
+    progressLabel = `${Math.round(progressPercent)}%`;
+  }
 
   return (
     <CardContainer>
       <CardTopRow>
         <CardFileInfo>
-          <span style={{ fontWeight: 600, marginRight: 8 }}>
-            {download.filename}
-          </span>
-          <CardFileExt>{download.ext}</CardFileExt>
+          <span style={{ fontWeight: 600, marginRight: 8 }}>{download.filename}</span>
         </CardFileInfo>
         <CardUrlAndStatus>
           <CardUrlText>{download.url}</CardUrlText>
-          <CardStatus $status={download.status}>{download.status}</CardStatus>
+          <CardStatus $status={download.status}>{statusLabel}</CardStatus>
         </CardUrlAndStatus>
       </CardTopRow>
       <CardProgressBar
@@ -109,11 +136,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
             textShadow: "0 1px 4px #23284d, 0 0 2px #23284d, 0 0 6px #23284d",
           }}
         >
-          {download.status === "concluído"
-            ? "100%"
-            : download.status === "pausado"
-              ? `${Math.round(progressPercent)}% (Pausado)`
-              : `${Math.round(progressPercent)}%`}
+          {progressLabel}
         </span>
       </CardProgressBar>
       <CardActions>
@@ -145,7 +168,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
             Baixar
           </button>
         )}
-        {download.status === "baixando" && (
+        {(download.status === "baixando" || download.status === "preparando" || download.status === "convertendo") && (
           <PauseButton
             type="button"
             onClick={() => onDownload(download.id, "pause")}

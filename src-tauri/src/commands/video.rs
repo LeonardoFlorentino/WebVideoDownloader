@@ -1,26 +1,23 @@
 #[allow(dead_code)]
 // Handles HLS and JMV downloads with window
 #[tauri::command]
-pub fn download_special_video(window: tauri::Window, username: String, url: String, save_path: String, id: Option<u64>) -> CommandResult<()> {
+pub fn download_special_video(username: String, url: String, save_path: String, id: Option<u64>) -> CommandResult<()> {
     let filename = std::path::Path::new(&save_path)
         .file_name()
         .and_then(|n| n.to_str())
         .unwrap_or("video.mp4").to_string();
     if url.ends_with(".m3u8") || url.contains(".m3u8?") || url.contains("player.jmvstream.com") {
-        use std::sync::Arc;
-        let window_arc = Arc::new(window);
         let username_clone = username.clone();
         let url_clone = url.clone();
         let filename_clone = filename.clone();
         let id_clone = id.clone();
-        let window_for_thread = window_arc.clone();
         std::thread::spawn(move || {
             let client = crate::backend::http_client_helper::create_blocking_client().unwrap();
             let mut path = crate::backend::filesystem::get_project_root();
             path.push("Vídeos baixados");
             std::fs::create_dir_all(&path).ok();
             path.push(&filename_clone);
-            let _ = crate::backend::download_helpers::baixar_jmvstream(&client, &url_clone, &path, Some(&window_for_thread), id_clone, Some(&username_clone), None);
+            let _ = crate::backend::download_helpers::baixar_jmvstream(&client, &url_clone, &path, None, id_clone, Some(&username_clone), None);
         });
         return CommandResult { ok: true, data: Some(()), error: None };
     }
@@ -70,6 +67,14 @@ pub async fn integrated_pause_download(
     if let Some(mut prog) = crate::backend::download_progress::get_progress(&url) {
         prog.status = "pausado".to_string();
         crate::backend::download_progress::update_progress(&url, prog);
+    }
+    // Seta flag global de pausa para downloads HLS
+    {
+        use crate::backend::download_helpers::PAUSE_FLAGS;
+        let map = PAUSE_FLAGS.lock().unwrap();
+        if let Some(flag) = map.get(&url) {
+            flag.store(true, std::sync::atomic::Ordering::SeqCst);
+        }
     }
     // Aborta a task protegida pelo lock, mas solta o lock antes de emitir evento
     {

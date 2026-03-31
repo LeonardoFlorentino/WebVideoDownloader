@@ -30,6 +30,34 @@ import { listen } from "@tauri-apps/api/event";
 
 type HomeProps = { username: string };
 function Home({ username }: HomeProps) {
+  const { downloads, setDownloads } = useDownloads() as {
+    downloads: Download[];
+    setDownloads: React.Dispatch<React.SetStateAction<Download[]>>;
+  };
+
+  // Polling de progresso dos downloads (corrigido para evitar ReferenceError)
+  useEffect(() => {
+    if (!username) return;
+    const poll = async () => {
+      const { pollDownloadsProgress } =
+        await import("../../service/pollDownloadsProgress");
+      setDownloads((prev) => {
+        if (prev.length === 0) return prev;
+        // Instead, call pollDownloadsProgress outside setState
+        pollDownloadsProgress(prev).then((updated) => {
+          setDownloads(updated);
+        });
+        return prev;
+      });
+    };
+    const interval = setInterval(() => {
+      void poll();
+    }, 1000);
+    void poll();
+    return () => {
+      clearInterval(interval);
+    };
+  }, [username, setDownloads]);
   // ...existing code...
 
   // Novo handleDownload para pause/resume/stop
@@ -39,22 +67,18 @@ function Home({ username }: HomeProps) {
     const filename = d.filename.endsWith(".mp4")
       ? d.filename
       : `${d.filename}.mp4`;
-    const savePath = `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${filename}`;
     if (action === "pause") {
       setPausando((prev) => ({ ...prev, [d.url]: true }));
       // Não bloqueia a UI aguardando o backend
       import("../../service/pauseDownloadById").then(({ pauseDownloadById }) =>
         pauseDownloadById(d.id, d.url)
           .catch(() => toast.error("Erro ao pausar download"))
-          .finally(() => setPausando((prev) => ({ ...prev, [d.url]: false }))));
+          .finally(() => setPausando((prev) => ({ ...prev, [d.url]: false }))),
+      );
       return;
     }
     if (action === "resume") {
-      setDownloads((ds: Download[]) =>
-        ds.map((x: Download) =>
-          x.id === id ? { ...x, status: "baixando" } : x,
-        ),
-      );
+      const savePath = `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${filename}`;
       import("../../service/resumeDownload").then(({ resumeDownloadTauri }) => {
         resumeDownloadTauri(String(d.id), username, d.url, savePath).catch(
           () => {
@@ -71,12 +95,9 @@ function Home({ username }: HomeProps) {
     }
     // Download normal
     try {
+      const savePath = `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${filename}`;
       await baixarVideoTauri(String(d.id), username, d.url, savePath);
-      setDownloads((ds: Download[]) =>
-        ds.map((x: Download) =>
-          x.id === id ? { ...x, status: "baixando" } : x,
-        ),
-      );
+      // Não altera status localmente, espera backend/evento
     } catch (err) {
       setDownloads((ds: Download[]) =>
         ds.map((x: Download) =>
@@ -88,10 +109,6 @@ function Home({ username }: HomeProps) {
   };
   // (Removido: estado e funções do modal de edição não utilizados)
   const [url, setUrl] = useState("");
-  const { downloads, setDownloads } = useDownloads() as {
-    downloads: Download[];
-    setDownloads: React.Dispatch<React.SetStateAction<Download[]>>;
-  };
   const [filename, setFilename] = useState("");
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [pausando, setPausando] = useState<{ [url: string]: boolean }>({});
@@ -263,11 +280,6 @@ function Home({ username }: HomeProps) {
     setDownloadingAll(true);
     downloads.forEach((d) => {
       if (d.status === "pendente") {
-        setDownloads((ds: Download[]) =>
-          ds.map((x: Download) =>
-            x.id === d.id ? { ...x, status: "baixando" } : x,
-          ),
-        );
         // Garante extensão .mp4
         const filename = d.filename.endsWith(".mp4")
           ? d.filename
@@ -407,7 +419,7 @@ function Home({ username }: HomeProps) {
             download={d}
             onDownload={handleDownload}
             onRemove={handleRemove}
-            onOpenFolder={() => openDownloadFolder(d.filename)}
+            onOpenFolder={() => openDownloadFolder("")}
             pausando={!!pausando[d.url]}
           />
         ))}
