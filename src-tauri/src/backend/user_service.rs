@@ -1,3 +1,15 @@
+/// Busca o username associado a uma URL (primeiro usuário que possuir a url em main_urls)
+pub fn get_username_for_url(url: &str) -> Option<String> {
+    let path = crate::backend::filesystem::get_project_root().join("user_data/user.json");
+    if let Ok(user_list) = read_user_list(&path) {
+        for user in user_list.users {
+            if user.main_urls.iter().any(|mu| mu.url == url) {
+                return Some(user.username.clone());
+            }
+        }
+    }
+    None
+}
 /// Update the progress field for a MainUrl in user.json
 pub fn update_main_url_progress(username: String, url: String, progress: f32) -> Result<(), String> {
     let path = crate::backend::filesystem::get_project_root().join("user_data/user.json");

@@ -1,5 +1,5 @@
 import React from "react";
-import { FiTrash2, FiEdit2 } from "react-icons/fi";
+import { FiTrash2, FiPause, FiPlay } from "react-icons/fi";
 import { EditDownloadModal } from "../../../components/EditDownloadModal";
 import {
   CardContainer,
@@ -14,36 +14,34 @@ import {
   OpenFolderButton,
   CardTopRow,
   CardUrlAndStatus,
+  PauseButton,
+  ResumeButton,
 } from "./DownloadCard.styles";
 
-interface Download {
-  id: number;
-  filename: string;
-  ext: string;
-  url: string;
-  status: string;
-  total?: number;
-  progress: number;
-}
+import type { Download } from "@/types/download";
+import { ClipLoader } from "react-spinners";
 
 interface DownloadCardProps {
   download: Download;
-  onOpenFolder: () => void;
+  onDownload: (id: number, action?: "pause" | "resume") => void;
   onRemove: (id: number) => void;
-  onStartDownload: (id: number) => void;
-  editModalOpen: boolean;
-  editFilename: string;
-  editUrl: string;
-  openEditModal: () => void;
-  handleEditSave: (filename: string, url: string) => void;
-  handleEditCancel: () => void;
+  onOpenFolder: () => void;
+  pausando?: boolean;
+  // Os props abaixo são opcionais, caso use edição
+  editModalOpen?: boolean;
+  editFilename?: string;
+  editUrl?: string;
+  openEditModal?: () => void;
+  handleEditSave?: (filename: string, url: string) => void;
+  handleEditCancel?: () => void;
 }
 
 const DownloadCard: React.FC<DownloadCardProps> = ({
   download,
-  onOpenFolder,
+  onDownload,
   onRemove,
-  onStartDownload,
+  onOpenFolder,
+  pausando,
   editModalOpen,
   editFilename,
   editUrl,
@@ -51,15 +49,13 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
   handleEditSave,
   handleEditCancel,
 }) => {
-  // Calcula percentual corretamente a partir de bytes
+  // Corrige progress percentual (0-1 vindo do backend)
   const progressPercent =
     download.total && download.total > 0
       ? Math.min((download.progress / download.total) * 100, 100)
-      : 0;
+      : Math.min(download.progress * 100, 100);
 
-  // Normaliza status para tratar "concluido" e "concluído" como equivalentes
-  const isConcluido =
-    download.status === "concluído" || download.status === "concluido";
+  // (Removido: isConcluido não utilizado)
 
   return (
     <CardContainer>
@@ -72,17 +68,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         </CardFileInfo>
         <CardUrlAndStatus>
           <CardUrlText>{download.url}</CardUrlText>
-          <CardStatus $status={download.status}>
-            {isConcluido
-              ? "Concluído"
-              : download.status === "baixando"
-                ? "Baixando..."
-                : download.status === "pausado"
-                  ? "Pausado"
-                  : download.status === "erro"
-                    ? "Erro"
-                    : "Pendente"}
-          </CardStatus>
+          <CardStatus $status={download.status}>{download.status}</CardStatus>
         </CardUrlAndStatus>
       </CardTopRow>
       <CardProgressBar
@@ -92,7 +78,10 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
           <CardProgressFill
             $status={download.status}
             style={{
-              width: isConcluido ? "100%" : `${progressPercent}%`,
+              width:
+                download.status === "concluído"
+                  ? "100%"
+                  : `${progressPercent}%`,
               height: 24,
               borderRadius: 6,
               position: "absolute",
@@ -120,7 +109,7 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
             textShadow: "0 1px 4px #23284d, 0 0 2px #23284d, 0 0 6px #23284d",
           }}
         >
-          {isConcluido
+          {download.status === "concluído"
             ? "100%"
             : download.status === "pausado"
               ? `${Math.round(progressPercent)}% (Pausado)`
@@ -128,27 +117,80 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         </span>
       </CardProgressBar>
       <CardActions>
-                {/* Botão Baixar */}
-                {download.status === "pendente" && (
-                  <button
-                    type="button"
-                    title="Baixar vídeo"
-                    onClick={() => onStartDownload(download.id)}
-                    style={{
-                      background: "#6c63ff",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 6,
-                      padding: "6px 16px",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      marginRight: 8,
-                      fontSize: 16,
-                    }}
-                  >
-                    Baixar
-                  </button>
-                )}
+        {/* Botão dinâmico: baixar, pausar, continuar */}
+        {download.status === "pendente" && (
+          <button
+            type="button"
+            onClick={() => onDownload(download.id)}
+            style={{
+              background: "#6c63ff",
+              color: "#fff",
+              border: "none",
+              borderRadius: 6,
+              padding: "6px 16px",
+              fontWeight: 500,
+              cursor: "pointer",
+              opacity: 1,
+              transition: "background 0.2s",
+              outline: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontSize: 16,
+              letterSpacing: 0.2,
+              minWidth: 90,
+            }}
+          >
+            Baixar
+          </button>
+        )}
+        {download.status === "baixando" && (
+          <PauseButton
+            type="button"
+            onClick={() => onDownload(download.id, "pause")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              cursor: pausando ? "not-allowed" : "pointer",
+              opacity: pausando ? 0.6 : 1,
+              pointerEvents: pausando ? "none" : "auto",
+            }}
+            disabled={!!pausando}
+          >
+            {pausando ? (
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginRight: 6,
+                }}
+              >
+                <ClipLoader size={15} color="#fff" />
+              </span>
+            ) : (
+              <FiPause size={15} style={{ marginRight: 6 }} />
+            )}
+            Pausar
+          </PauseButton>
+        )}
+        {download.status === "pausado" && (
+          <ResumeButton
+            type="button"
+            onClick={() => onDownload(download.id, "resume")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              minWidth: 90,
+            }}
+          >
+            <FiPlay size={15} style={{ marginRight: 6 }} />
+            Continuar
+          </ResumeButton>
+        )}
+        {/* Botão abrir pasta */}
         <OpenFolderButton
           type="button"
           onClick={onOpenFolder}
@@ -156,10 +198,12 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         >
           Abrir Pasta
         </OpenFolderButton>
+        {/* Botão editar e remover */}
         <button
           type="button"
-          title="Editar nome e URL"
+          title="Editar download"
           onClick={openEditModal}
+          aria-label="Editar download"
           style={{
             background: "none",
             border: "none",
@@ -173,9 +217,21 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
             justifyContent: "center",
             fontSize: 20,
           }}
-          aria-label="Editar nome e URL"
+          disabled={typeof openEditModal !== "function"}
         >
-          <FiEdit2 size={18} />
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+          </svg>
         </button>
         <button
           type="button"
@@ -199,13 +255,19 @@ const DownloadCard: React.FC<DownloadCardProps> = ({
         >
           <FiTrash2 size={22} />
         </button>
-        <EditDownloadModal
-          isOpen={editModalOpen}
-          initialFilename={editFilename}
-          initialUrl={editUrl}
-          onSave={handleEditSave}
-          onCancel={handleEditCancel}
-        />
+        {/* Modal de edição, se necessário */}
+        {editModalOpen !== undefined &&
+          openEditModal &&
+          handleEditSave &&
+          handleEditCancel && (
+            <EditDownloadModal
+              isOpen={editModalOpen}
+              initialFilename={editFilename || ""}
+              initialUrl={editUrl || ""}
+              onSave={handleEditSave}
+              onCancel={handleEditCancel}
+            />
+          )}
       </CardActions>
     </CardContainer>
   );

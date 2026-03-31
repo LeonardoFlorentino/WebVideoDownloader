@@ -1,34 +1,82 @@
 {
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "video_3.mp4",
-    "total_size": 805735288,
-    "downloaded": 805735288,
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/50rt1k1xison318/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/50rt1k1xison318/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 3 - Sílabas, Acentos e Sinais.mp4",
+    "total_size": 3678724592,
+    "downloaded": 3678724592,
     "status": "concluído",
-    "id": 4
-  },
-  "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=2042000.m3u8": {
-    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=2042000.m3u8",
-    "filename": "Oceano.mp4",
-    "total_size": 32245384,
-    "downloaded": 32245384,
-    "status": "concluído",
-    "id": 2
-  },
-  "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8": {
-    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
-    "filename": "Oceano.mp4",
-    "total_size": 31182285,
-    "downloaded": 31182285,
-    "status": "concluído",
-    "id": 2
+    "id": 1
   },
   "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/playlist.m3u8?uf085lum5fbz=arbrhj29dqup89": {
     "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/playlist.m3u8?uf085lum5fbz=arbrhj29dqup89",
-    "filename": "video_3.mp4",
+    "filename": "Aula 1 - A História da Língua Grega.mp4",
     "total_size": 781654011,
     "downloaded": 781654011,
     "status": "concluído",
-    "id": 4
+    "id": 2
+  },
+  "https://filesamples.com/samples/video/mp4/sample_640x360.mp4": {
+    "url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
+    "filename": "video_2.mp4",
+    "total_size": 0,
+    "downloaded": 0,
+    "status": "baixando",
+    "id": null
+  },
+  "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=2042000.m3u8": {
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=2042000.m3u8",
+    "filename": "video_3.mp4",
+    "total_size": 32245384,
+    "downloaded": 32245384,
+    "status": "concluído",
+    "id": 3
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/3jpf3by267421mn/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/3jpf3by267421mn/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 6 - Futuro do Indicativo.mp4",
+    "total_size": 721336636,
+    "downloaded": 721336636,
+    "status": "concluído",
+    "id": 1
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/14n12f8q8wjijn5/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/14n12f8q8wjijn5/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 5 - Presente do Indicativo e Subjuntivo.mp4",
+    "total_size": 1407170600,
+    "downloaded": 1407170600,
+    "status": "concluído",
+    "id": 3
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/7ji6s1ozla0h120/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/7ji6s1ozla0h120/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 4 - Introdução aos Verbos Gregos.mp4",
+    "total_size": 698810664,
+    "downloaded": 698810664,
+    "status": "concluído",
+    "id": 2
+  },
+  "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4": {
+    "url": "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
+    "filename": "video_1.mp4",
+    "total_size": 0,
+    "downloaded": 0,
+    "status": "pausado",
+    "id": null
+  },
+  "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8": {
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+    "filename": "video_3.mp4",
+    "total_size": 31182285,
+    "downloaded": 31182285,
+    "status": "pausado",
+    "id": 3
+  },
+  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+    "filename": "Aula 2 - Alfabeto Grego.mp4",
+    "total_size": 805735288,
+    "downloaded": 805735288,
+    "status": "concluído",
+    "id": 3
   }
 }

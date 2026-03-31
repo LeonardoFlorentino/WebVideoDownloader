@@ -4,12 +4,8 @@ use std::sync::Arc;
 use crate::backend::download_manager::DownloadManager;
 use commands::video::{
     download_video,
-    download_cascade,
-    list_downloaded_videos,
-    get_title_from_url_command,
     start_download,
     integrated_pause_download,
-    pausar_download,
     get_progress_command,
     download_special_video,
 };
@@ -31,9 +27,6 @@ fn main() {
         .manage(manager)
         .invoke_handler(tauri::generate_handler![
             download_video,
-            download_cascade,
-            list_downloaded_videos,
-            get_title_from_url_command,
             register_user,
             authenticate_user,
             add_main_url_command,
@@ -44,12 +37,10 @@ fn main() {
             open_download_folder_tauri,
             remove_main_url_command,
             remove_main_url_by_id_command,
-            pausar_download,
             start_download,
             pause_download,
             resume_download,
             integrated_pause_download,
-            // baixar_video_roteado_tauri removido
             get_progress_command,
             download_special_video,
         ])

@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 pub fn get_project_root() -> PathBuf {
-    // Procura o package.json para identificar a raiz do projeto
-    let mut path = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
+    // Procura o package.json a partir do diretório atual (onde o comando foi executado)
+    let mut path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     loop {
         if path.join("package.json").exists() {
             return path;
@@ -11,24 +11,28 @@ pub fn get_project_root() -> PathBuf {
             break;
         }
     }
-    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+    PathBuf::from(".")
 }
 
 pub fn open_download_folder(playlist: String) -> Result<(), String> {
     use std::process::Command;
-    use std::fs;
     let mut path = get_project_root();
     path.push("Vídeos baixados");
     if !playlist.is_empty() {
         path.push(&playlist);
     }
-    // Cria a pasta se não existir
-    if let Err(e) = fs::create_dir_all(&path) {
-        return Err(format!("Erro ao criar pasta: {}", e));
+    // Só abre se a pasta existir
+    if !path.exists() {
+        return Err(format!("A pasta não existe: {}", path.display()));
     }
     #[cfg(target_os = "windows")]
     {
-        let path_str = path.to_str().ok_or_else(|| format!("Caminho inválido: {:?}", path))?;
+        let dir = if path.is_file() {
+            path.parent().map(|p| p.to_path_buf()).unwrap_or(path.clone())
+        } else {
+            path.clone()
+        };
+        let path_str = dir.to_str().ok_or_else(|| format!("Caminho inválido: {:?}", dir))?;
         Command::new("explorer").arg(path_str).spawn().map_err(|e| {
             e.to_string()
         })?;

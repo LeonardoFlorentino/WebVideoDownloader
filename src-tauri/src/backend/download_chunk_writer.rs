@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::fs::File;
 use std::sync::{Arc, atomic::AtomicBool};
 use tauri::{Window, Emitter};
@@ -29,9 +28,10 @@ where
             if let Some(w) = window {
                 let _ = w.emit("download_paused", serde_json::json!({ "url": url }));
             }
+            // log removido
             return Err("Download pausado".to_string());
         }
-        let next_chunk = timeout(Duration::from_secs(2), stream.next()).await;
+        let next_chunk = timeout(Duration::from_millis(200), stream.next()).await;
         match next_chunk {
             Ok(Some(chunk_result)) => {
                 let chunk = chunk_result.map_err(|e| format!("Erro ao ler chunk: {}", e))?;
@@ -42,6 +42,15 @@ where
                 current += chunk.len() as u64;
                 progress.downloaded = current;
                 update_progress(url, progress.clone());
+                // Print progresso detalhado no terminal
+                let _percent = if total_size > 0 {
+                    (current as f64 / total_size as f64) * 100.0
+                } else {
+                    0.0
+                };
+                // log removido
+                use std::io::Write as _;
+                let _ = std::io::stdout().flush();
                 if let Some(w) = window {
                     let _ = w.emit("download-progress", serde_json::json!({
                         "id": progress.id.unwrap_or(0).to_string(),

@@ -45,18 +45,58 @@ pub fn update_progress(url: &str, progress: DownloadProgress) {
     all.insert(url.to_string(), progress.clone());
     save_all_progress(&all);
     // Log detalhado
-    println!("[BACKEND][update_progress] url='{}' status='{}' downloaded={} total={} filename='{}' id={:?}", url, progress.status, progress.downloaded, progress.total_size, progress.filename, progress.id);
+    // log removido
+
+    // Persistir porcentagem no user.json sempre que houver progresso
+    if let Some(username) = crate::backend::user_service::get_username_for_url(url) {
+        let total = progress.total_size as f32;
+        let downloaded = progress.downloaded as f32;
+        let percent = if total > 0.0 { downloaded / total } else { 0.0 };
+        let _ = crate::backend::user_service::update_main_url_progress(username, url.to_string(), percent);
+    }
 }
 
 pub fn get_progress(url: &str) -> Option<DownloadProgress> {
+    use std::collections::HashSet;
+    use std::sync::Mutex;
+    use once_cell::sync::Lazy;
+    static LOGGED_MISSING: Lazy<Mutex<HashSet<String>>> = Lazy::new(|| Mutex::new(HashSet::new()));
     let all = load_all_progress();
     let found = all.get(url);
     if let Some(p) = found {
-        println!("[BACKEND][get_progress] url='{}' status='{}' downloaded={} total={} filename='{}' id={:?}", url, p.status, p.downloaded, p.total_size, p.filename, p.id);
-    } else {
-        println!("[BACKEND][get_progress] url='{}' NÃO ENCONTRADO", url);
+        // log removido
+        return Some(p.clone());
     }
-    found.cloned()
+    // Se não há progresso salvo, mas o arquivo existe e está completo, retorna progresso concluído
+    // Tenta deduzir nome do arquivo salvo a partir da URL real
+    let root = crate::backend::filesystem::get_project_root();
+    let videos_dir = root.join("Vídeos baixados");
+    // Extrai o nome real do arquivo da URL
+    let filename_from_url = url.split('/').last().unwrap_or("");
+    let file_path = videos_dir.join(filename_from_url);
+    if file_path.exists() {
+        let meta = std::fs::metadata(&file_path).ok();
+        let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
+        if size > 0 {
+            let progress = DownloadProgress {
+                url: url.to_string(),
+                filename: filename_from_url.to_string(),
+                total_size: size,
+                downloaded: size,
+                status: "concluído".to_string(),
+                id: None,
+            };
+            // log removido
+            return Some(progress);
+        }
+    }
+    // Só loga uma vez por URL
+    let mut logged = LOGGED_MISSING.lock().unwrap();
+    if !logged.contains(url) {
+        // log removido
+        logged.insert(url.to_string());
+    }
+    None
 }
 
 pub fn remove_progress(url: &str) {
