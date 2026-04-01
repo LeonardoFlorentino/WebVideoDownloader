@@ -179,6 +179,22 @@ pub async fn start_download(
             println!("[START_DOWNLOAD] INICIANDO download para url='{}' filename='{}' username='{}'", url_clone, save_path_clone, username_clone);
         use futures_util::StreamExt;
         use std::io::Write;
+        // Se o arquivo já existe mas é de uma URL diferente (sem progresso salvo = novo download),
+        // gera um nome único para não sobrescrever o arquivo concluído.
+        let save_path_clone: String = {
+            let p = std::path::Path::new(&save_path_clone);
+            let has_progress = crate::backend::download_progress::get_progress(&url_clone).is_some();
+            if p.exists() && !has_progress {
+                let unique = crate::backend::download_helpers::unique_save_path(p);
+                println!(
+                    "[START_DOWNLOAD] arquivo '{}' já existe, usando nome único '{}'",
+                    p.display(), unique.display()
+                );
+                unique.to_string_lossy().into_owned()
+            } else {
+                save_path_clone.clone()
+            }
+        };
         let current_size = if std::path::Path::new(&save_path_clone).exists() {
             std::fs::metadata(&save_path_clone).map(|m| m.len()).unwrap_or(0)
         } else {

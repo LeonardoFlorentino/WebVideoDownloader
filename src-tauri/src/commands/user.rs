@@ -75,7 +75,7 @@ pub fn get_main_urls_command(username: String) -> CommandResult<Vec<crate::backe
     }
 }
 
-#[tauri::command(rename = "update_main_url_title")]
+#[tauri::command]
 pub fn update_main_url_title_command(username: String, old_url: String, new_url: String, new_filename: String) -> CommandResult<()> {
     match update_main_url_title(username, old_url, new_url, new_filename) {
         Ok(_) => CommandResult { ok: true, data: Some(()), error: None },

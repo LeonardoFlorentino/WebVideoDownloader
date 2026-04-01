@@ -624,6 +624,25 @@ pub fn download_hls_file(
 }
 
 
+/// Gera um caminho de destino único: se `path` já existir, tenta
+/// `stem(1).ext`, `stem(2).ext`, ... até encontrar um nome livre.
+pub fn unique_save_path(path: &Path) -> std::path::PathBuf {
+    if !path.exists() {
+        return path.to_path_buf();
+    }
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("video");
+    let ext  = path.extension().and_then(|e| e.to_str()).unwrap_or("mp4");
+    let parent = path.parent().unwrap_or(Path::new("."));
+    let mut counter = 1u32;
+    loop {
+        let candidate = parent.join(format!("{}({}).{}", stem, counter, ext));
+        if !candidate.exists() {
+            return candidate;
+        }
+        counter += 1;
+    }
+}
+
 /// Helper to open a file for appending, creating if needed
 pub fn open_file_append(path: &Path) -> Result<File, String> {
     OpenOptions::new()
@@ -715,6 +734,23 @@ pub fn baixar_jmvstream(
     // Depuração: início do download JMVStream
     println!("[DEBUG] Iniciando baixar_jmvstream para URL: {}", m3u8_url);
 
+    // Se não há arquivo parcial (.ts) em andamento mas o destino final já existe,
+    // Verifica arquivo parcial anterior com o nome original
+    let initial_temp = { let mut t = dest_path.to_path_buf(); t.set_extension("ts"); t };
+    let existing_temp_size_check = std::fs::metadata(&initial_temp).map(|m| m.len()).unwrap_or(0);
+
+    // gera um nome único: video(1).mp4, video(2).mp4, etc.
+    let final_dest: std::path::PathBuf = if existing_temp_size_check == 0 && dest_path.exists() {
+        let u = unique_save_path(dest_path);
+        println!(
+            "[JMVSTREAM] arquivo '{}' já existe, usando nome único '{}'",
+            dest_path.display(), u.display()
+        );
+        u
+    } else {
+        dest_path.to_path_buf()
+    };
+    let dest_path = final_dest.as_path();
     let mut temp_dest = dest_path.to_path_buf();
     temp_dest.set_extension("ts");
     let existing_temp_size = std::fs::metadata(&temp_dest).map(|m| m.len()).unwrap_or(0);

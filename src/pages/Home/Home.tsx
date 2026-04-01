@@ -174,11 +174,42 @@ function Home({ username }: HomeProps) {
       toast.error(`Erro ao baixar vídeo: ${err}`);
     }
   };
-  // (Removido: estado e funções do modal de edição não utilizados)
   const [url, setUrl] = useState("");
   const [filename, setFilename] = useState("");
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [pausando, setPausando] = useState<{ [url: string]: boolean }>({});
+
+  // Estado do modal de edição
+  const [editModalOpenId, setEditModalOpenId] = useState<number | null>(null);
+
+  const handleEditSave = async (newFilename: string, newUrl: string) => {
+    const d = downloads.find((x: Download) => x.id === editModalOpenId);
+    if (!d) return;
+    try {
+      const { updateMainUrlTitle } = await import("../../service/downloadsService");
+      await updateMainUrlTitle(username, d.url, newUrl, newFilename);
+      setDownloads((ds: Download[]) =>
+        ds.map((x: Download) =>
+          x.id === editModalOpenId
+            ? {
+                ...x,
+                filename: newFilename,
+                url: newUrl,
+                // Se a URL mudou, reseta progresso e status
+                ...(newUrl !== x.url ? { progress: 0, total: 0, status: "pendente" } : {}),
+              }
+            : x,
+        ),
+      );
+      toast.success("Download atualizado com sucesso");
+    } catch (err) {
+      toast.error(`Erro ao atualizar download: ${err}`);
+    } finally {
+      setEditModalOpenId(null);
+    }
+  };
+
+  const handleEditCancel = () => setEditModalOpenId(null);
   const navigate = useNavigate();
   const downloadsRef = useRef<Download[]>(downloads);
 
@@ -481,6 +512,12 @@ function Home({ username }: HomeProps) {
             onRemove={handleRemove}
             onOpenFolder={() => openDownloadFolder("")}
             pausando={!!pausando[d.url]}
+            openEditModal={() => setEditModalOpenId(d.id)}
+            editModalOpen={editModalOpenId === d.id}
+            editFilename={d.filename}
+            editUrl={d.url}
+            handleEditSave={handleEditSave}
+            handleEditCancel={handleEditCancel}
           />
         ))}
       </DownloadList>

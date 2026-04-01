@@ -22,7 +22,7 @@ export async function updateMainUrlTitle(
   newUrl: string,
   newFilename: string,
 ) {
-  return invoke("update_main_url_title", {
+  return invoke("update_main_url_title_command", {
     username,
     oldUrl,
     newUrl,

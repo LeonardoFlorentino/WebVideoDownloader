@@ -120,8 +120,14 @@ pub fn update_main_url_title(username: String, old_url: String, new_url: String,
     let mut user_list = read_user_list(&path)?;
     let user = find_user_mut(&mut user_list, &username).ok_or("Usuário não encontrado")?;
     let main_url = find_main_url_mut(user, &old_url).ok_or("URL não encontrada para o usuário")?;
+    let url_changed = main_url.url != new_url;
     main_url.url = new_url.clone();
     main_url.filename = new_filename.clone();
+    // Se a URL mudou, o progresso anterior não tem mais relação com o novo conteúdo
+    if url_changed {
+        main_url.progress = Some(0.0);
+        main_url.status = "pendente".to_string();
+    }
     write_user_list(&path, &user_list)?;
     Ok(())
 }
