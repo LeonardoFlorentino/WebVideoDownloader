@@ -368,28 +368,71 @@ function Home({ username }: HomeProps) {
   // Certifique-se de salvar o usuário no localStorage após login/cadastro:
   // localStorage.setItem("lastUser", username);
 
-  const handleDownloadAll = () => {
-    setDownloadingAll(true);
-    downloads.forEach((d: Download) => {
-      if (d.status === "pendente") {
-        const filenameFinal = d.filename.endsWith(".mp4")
-          ? d.filename
-          : `${d.filename}.mp4`;
-        baixarVideoTauri(
-          String(d.id),
-          username,
-          d.url,
-          `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${filenameFinal}`,
-        ).catch((err: unknown) => {
-          setDownloads((ds: Download[]) =>
-            ds.map((x: Download) =>
-              x.id === d.id ? { ...x, status: "erro", progress: 0 } : x,
-            ),
-          );
-          toast.error(`Erro ao baixar: ${filenameFinal}\n${err}`);
-        });
-      }
+  const waitForQueueStepToFinish = (id: number): Promise<void> =>
+    new Promise((resolve) => {
+      const startedAt = Date.now();
+      const timer = setInterval(() => {
+        const current = downloadsRef.current.find((x: Download) => x.id === id);
+        if (!current) {
+          clearInterval(timer);
+          resolve();
+          return;
+        }
+        const st = normalizeStatus(current.status);
+        if (st === "concluído" || st === "erro" || st === "pausado") {
+          clearInterval(timer);
+          resolve();
+          return;
+        }
+        // Evita travar a fila para sempre em casos inesperados.
+        if (Date.now() - startedAt > 4 * 60 * 60 * 1000) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 500);
     });
+
+  const handleDownloadAll = async () => {
+    if (downloadingAll) return;
+    setDownloadingAll(true);
+    const queue = [...downloadsRef.current]
+      .filter((d: Download) => normalizeStatus(d.status) !== "concluído")
+      .sort((a: Download, b: Download) => a.id - b.id);
+
+    for (const item of queue) {
+      const current = downloadsRef.current.find((x: Download) => x.id === item.id);
+      if (!current) continue;
+      const st = normalizeStatus(current.status);
+      if (st === "concluído") continue;
+
+      if (st === "baixando" || st === "preparando" || st === "convertendo") {
+        await waitForQueueStepToFinish(current.id);
+        continue;
+      }
+
+      const filenameFinal = current.filename.endsWith(".mp4")
+        ? current.filename
+        : `${current.filename}.mp4`;
+
+      try {
+        await baixarVideoTauri(
+          String(current.id),
+          username,
+          current.url,
+          `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${filenameFinal}`,
+        );
+      } catch (err: unknown) {
+        setDownloads((ds: Download[]) =>
+          ds.map((x: Download) =>
+            x.id === current.id ? { ...x, status: "erro", progress: 0 } : x,
+          ),
+        );
+        toast.error(`Erro ao baixar: ${filenameFinal}\n${err}`);
+      }
+
+      await waitForQueueStepToFinish(current.id);
+    }
+
     setDownloadingAll(false);
   };
 
