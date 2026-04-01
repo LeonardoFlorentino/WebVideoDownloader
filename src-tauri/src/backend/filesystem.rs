@@ -47,3 +47,13 @@ pub fn open_download_folder(playlist: String) -> Result<(), String> {
     }
     Ok(())
 }
+
+pub fn ensure_download_folder(playlist: String) -> Result<PathBuf, String> {
+    let mut path = get_project_root();
+    path.push("Vídeos baixados");
+    if !playlist.is_empty() {
+        path.push(&playlist);
+    }
+    std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+    Ok(path)
+}

@@ -2,7 +2,6 @@ use crate::backend::user_service::remove_main_url_by_id;
 
 #[tauri::command]
 pub fn remove_main_url_by_id_command(username: String, id: u64) -> CommandResult<()> {
-    println!("[LOG] Chamada de remoção de main_url por id para usuário: '{}' | id: {}", username, id);
     match remove_main_url_by_id(username, id) {
         Ok(_) => CommandResult { ok: true, data: Some(()), error: None },
         Err(e) => {
@@ -35,7 +34,6 @@ mod tests {
 use crate::backend::user_service::remove_main_url;
 #[tauri::command]
 pub fn remove_main_url_command(username: String, url: String) -> CommandResult<()> {
-    println!("[LOG] Chamada de remoção de main_url para usuário: '{}' | url: '{}'", username, url);
     match remove_main_url(username, url) {
         Ok(_) => CommandResult { ok: true, data: Some(()), error: None },
         Err(e) => {

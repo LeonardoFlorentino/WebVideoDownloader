@@ -128,6 +128,7 @@ pub fn baixar_video_emit(window: Option<&Window>, url: &str, _filename: &str) ->
                 downloaded: disk_downloaded,
                 status: "baixando".to_string(),
                 id,
+                scope: None,
             }
         };
         // log removido

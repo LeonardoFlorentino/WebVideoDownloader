@@ -86,8 +86,6 @@ export async function pollDownloadsProgress(
         ) {
           prog = progress.data;
         }
-        // ÚNICO console.log: mostra o progresso retornado da rota get_progress
-        console.log("[PROGRESS get_progress]", { url: d.url, progress: prog });
         // Se vier só { url }, preenche os campos faltantes com zero/default
         if (prog && typeof prog === "object") {
           return {

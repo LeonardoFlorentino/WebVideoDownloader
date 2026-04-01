@@ -10,10 +10,14 @@ use commands::video::{
     download_special_video,
 };
 use commands::auth::{register_user, authenticate_user};
+use commands::panel_playlist::{
+    get_panel_playlists_command,
+    replace_panel_playlists_command,
+};
 use commands::user::{add_main_url_command, get_main_urls_command, update_main_url_title_command, remove_main_url_command};
 use commands::remove_main_url_by_id_command;
 use commands::playlist::{save_playlist, mark_playlist_downloaded};
-use commands::folder::open_download_folder_tauri;
+use commands::folder::{create_download_folder_tauri, open_download_folder_tauri};
 
 
 
@@ -29,12 +33,15 @@ fn main() {
             download_video,
             register_user,
             authenticate_user,
+            get_panel_playlists_command,
+            replace_panel_playlists_command,
             add_main_url_command,
             get_main_urls_command,
             update_main_url_title_command,
             save_playlist,
             mark_playlist_downloaded,
             open_download_folder_tauri,
+            create_download_folder_tauri,
             remove_main_url_command,
             remove_main_url_by_id_command,
             start_download,

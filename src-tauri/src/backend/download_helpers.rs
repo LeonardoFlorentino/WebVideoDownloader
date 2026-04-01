@@ -29,38 +29,32 @@ pub fn download_hls_file(
     id: Option<u64>,
     username: Option<&str>,
     should_stop: Option<&Arc<std::sync::atomic::AtomicBool>>,
+    progress_key: Option<&str>,
+    source: Option<&str>,
 ) -> Result<(), String> {
+    let progress_key = progress_key.unwrap_or(m3u8_url);
+    let scope = source.unwrap_or("home");
     // Salva em arquivo temporário .ts
     let mut temp_dest = dest_path.to_path_buf();
     temp_dest.set_extension("ts");
 
     // Resume real e baseado no arquivo parcial em disco.
     let existing_temp_size = std::fs::metadata(&temp_dest).map(|m| m.len()).unwrap_or(0);
-    let existing_progress = crate::backend::download_progress::get_progress(m3u8_url);
+    let existing_progress = crate::backend::download_progress::get_progress(progress_key);
     let is_resuming = existing_temp_size > 0;
     
     // Só limpa progresso se for novo download, não resume
     if !is_resuming {
-        crate::backend::download_progress::remove_progress(m3u8_url);
-    } else if let Some(ref prog) = existing_progress {
-        println!(
-            "[HLS_DOWNLOAD] RETOMANDO download para url='{}' bytes_anteriores={} status_anterior='{}' arquivo_parcial={}B",
-            m3u8_url, prog.downloaded, prog.status, existing_temp_size
-        );
-    } else {
-        println!(
-            "[HLS_DOWNLOAD] RETOMANDO download para url='{}' sem progresso salvo; usando arquivo_parcial={}B",
-            m3u8_url, existing_temp_size
-        );
-    }
+        crate::backend::download_progress::remove_progress(progress_key);
+    } 
     
     // Impede múltiplas execuções concorrentes para a mesma URL
     {
         let mut active = ACTIVE_HLS_DOWNLOADS.lock().unwrap();
-        if active.contains(m3u8_url) {
+        if active.contains(progress_key) {
             return Err("Download já em andamento para esta URL".to_string());
         }
-        active.insert(m3u8_url.to_string());
+        active.insert(progress_key.to_string());
     }
     // Emite status 'preparando' imediatamente ao iniciar
     let id_value = id.unwrap_or(0);
@@ -78,7 +72,7 @@ pub fn download_hls_file(
     let pause_flag = {
         let mut map = PAUSE_FLAGS.lock().unwrap();
         let flag = map
-            .entry(m3u8_url.to_string())
+            .entry(progress_key.to_string())
             .or_insert_with(|| Arc::new(std::sync::atomic::AtomicBool::new(false)))
             .clone();
         flag
@@ -87,16 +81,12 @@ pub fn download_hls_file(
     // Se a flag já estava em true quando chegamos aqui (pausa pedida durante "preparando"),
     // salva status pausado e retorna sem iniciar o download.
     if pause_flag.load(std::sync::atomic::Ordering::SeqCst) {
-        println!(
-            "[HLS_DOWNLOAD] pausa detectada antes de iniciar segmentos (durante preparando) para url='{}'",
-            m3u8_url
-        );
         let id_value_early = id.unwrap_or(0);
         let prog_prev = existing_progress.as_ref();
         let total_prev = prog_prev.map(|p| p.total_size).unwrap_or(0);
         let dl_prev = prog_prev.map(|p| p.downloaded).unwrap_or(existing_temp_size);
         crate::backend::download_progress::update_progress(
-            m3u8_url,
+            progress_key,
             crate::backend::download_progress::DownloadProgress {
                 url: m3u8_url.to_string(),
                 filename: dest_path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string(),
@@ -104,6 +94,7 @@ pub fn download_hls_file(
                 downloaded: dl_prev,
                 status: "pausado".to_string(),
                 id: Some(id_value_early),
+                scope: Some(scope.to_string()),
             },
         );
         if let Some(w) = window {
@@ -130,7 +121,7 @@ pub fn download_hls_file(
             active.remove(self.url);
         }
     }
-    let _guard = ActiveGuard { url: m3u8_url };
+    let _guard = ActiveGuard { url: progress_key };
     let resp = client.get(m3u8_url)
         .header("Referer", "https://player.jmvstream.com/")
         .send().map_err(|e| format!("Erro ao baixar playlist: {}", e))?;
@@ -216,7 +207,7 @@ pub fn download_hls_file(
     let mut key_cache: HashMap<String, Vec<u8>> = HashMap::new();
     if segments.is_empty() && is_master_playlist && !variant_playlists.is_empty() {
         let (_bw, url) = variant_playlists.iter().max_by_key(|(bw, _)| *bw).unwrap();
-        let result = download_hls_file(client, url, dest_path, window, progress_event, id, username, should_stop);
+        let result = download_hls_file(client, url, dest_path, window, progress_event, id, username, should_stop, Some(progress_key), Some(scope));
         if result.is_ok() {
             let meta = std::fs::metadata(dest_path).map_err(|e| format!("Erro ao finalizar arquivo: {}", e)).unwrap();
             let bytes_downloaded = meta.len();
@@ -230,18 +221,19 @@ pub fn download_hls_file(
                 downloaded: bytes_downloaded,
                 status: "concluído".to_string(),
                 id: Some(id_value),
+                scope: Some(scope.to_string()),
             };
-            crate::backend::download_progress::update_progress(m3u8_url, progress.clone());
-            // Atualiza user.json (main_urls) para a URL principal
+            crate::backend::download_progress::update_progress(progress_key, progress.clone());
             if let Some(w) = window {
-                // Usa username propagado corretamente
-                if let Some(username) = username {
-                    if let Err(_e) = crate::backend::user_service::update_main_url_progress(
-                        username.to_string(),
-                        m3u8_url.to_string(),
-                        1.0,
-                    ) {
-                        // log removido
+                if scope == "home" {
+                    if let Some(username) = username {
+                        if let Err(_e) = crate::backend::user_service::update_main_url_progress(
+                            username.to_string(),
+                            m3u8_url.to_string(),
+                            1.0,
+                        ) {
+                            // log removido
+                        }
                     }
                 }
                 let _ = w.emit("download-progress", serde_json::json!({
@@ -271,7 +263,7 @@ pub fn download_hls_file(
             }));
         }
         crate::backend::download_progress::update_progress(
-            m3u8_url,
+            progress_key,
             crate::backend::download_progress::DownloadProgress {
                 url: m3u8_url.to_string(),
                 filename: dest_path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string(),
@@ -279,6 +271,7 @@ pub fn download_hls_file(
                 downloaded: 0,
                 status: "erro".to_string(),
                 id,
+                scope: Some(scope.to_string()),
             }
         );
         return Err("Nenhum segmento .ts encontrado na playlist".to_string());
@@ -306,8 +299,7 @@ pub fn download_hls_file(
         0u64
     };
     
-    let mut last_terminal_log = std::time::Instant::now();
-    let id_value = id.or_else(|| {
+        let id_value = id.or_else(|| {
         dest_path.file_stem().and_then(|s| s.to_str()).and_then(|stem| stem.split('_').last().and_then(|n| n.parse::<u64>().ok()))
     }).unwrap_or(0);
     // Evento e log: preparando download (calculando tamanho total)
@@ -350,7 +342,7 @@ pub fn download_hls_file(
         }));
     }
     crate::backend::download_progress::update_progress(
-        m3u8_url,
+        progress_key,
         crate::backend::download_progress::DownloadProgress {
             url: m3u8_url.to_string(),
             filename: dest_path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string(),
@@ -358,6 +350,7 @@ pub fn download_hls_file(
             downloaded: bytes_downloaded,
             status: "baixando".to_string(),
             id,
+            scope: Some(scope.to_string()),
         }
     );
 
@@ -369,12 +362,8 @@ pub fn download_hls_file(
         // Checa flag global de pausa
         if pause_flag.load(std::sync::atomic::Ordering::SeqCst) {
             // Salva status pausado no progresso
-            println!(
-                "[HLS_DOWNLOAD] pausa detectada no segmento {}/{} para url='{}'",
-                i, segments.len(), m3u8_url
-            );
             crate::backend::download_progress::update_progress(
-                m3u8_url,
+                progress_key,
                 crate::backend::download_progress::DownloadProgress {
                     url: m3u8_url.to_string(),
                     filename: dest_path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string(),
@@ -382,6 +371,7 @@ pub fn download_hls_file(
                     downloaded: bytes_downloaded,
                     status: "pausado".to_string(),
                     id: Some(id_value),
+                    scope: Some(scope.to_string()),
                 }
             );
             if let Some(w) = window {
@@ -471,7 +461,7 @@ pub fn download_hls_file(
         }
         // Atualiza progresso persistente a cada segmento
         crate::backend::download_progress::update_progress(
-            m3u8_url,
+            progress_key,
             crate::backend::download_progress::DownloadProgress {
                 url: m3u8_url.to_string(),
                 filename: dest_path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string(),
@@ -479,24 +469,10 @@ pub fn download_hls_file(
                 downloaded: bytes_downloaded,
                 status: "baixando".to_string(),
                 id: Some(id_value),
+                scope: Some(scope.to_string()),
             }
         );
-        if last_terminal_log.elapsed().as_secs() >= 5 {
-            let percent = if total_size > 0 {
-                ((bytes_downloaded as f64 / total_size as f64) * 100.0).clamp(0.0, 100.0)
-            } else {
-                0.0
-            };
-            println!(
-                "[HLS_DOWNLOAD][PROGRESSO] id='{}' {:.1}% ({}/{}) url='{}'",
-                id_value,
-                percent,
-                bytes_downloaded,
-                total_size,
-                m3u8_url
-            );
-            last_terminal_log = std::time::Instant::now();
-        }
+        
     }
     let meta = std::fs::metadata(&temp_dest).map_err(|e| format!("Erro ao finalizar arquivo temporário: {}", e))?;
     if meta.len() == 0 {
@@ -514,7 +490,7 @@ pub fn download_hls_file(
     }
     // Persiste o status 'convertendo' para o polling do frontend
     crate::backend::download_progress::update_progress(
-        m3u8_url,
+        progress_key,
         crate::backend::download_progress::DownloadProgress {
             url: m3u8_url.to_string(),
             filename: dest_path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string(),
@@ -522,6 +498,7 @@ pub fn download_hls_file(
             downloaded: bytes_downloaded,
             status: "convertendo".to_string(),
             id: Some(id_value),
+            scope: Some(scope.to_string()),
         }
     );
 
@@ -569,13 +546,14 @@ pub fn download_hls_file(
                 }));
             }
             // Persiste status 'baixando' brevemente
-            crate::backend::download_progress::update_progress(&m3u8_url_clone, crate::backend::download_progress::DownloadProgress {
+            crate::backend::download_progress::update_progress(progress_key, crate::backend::download_progress::DownloadProgress {
                 url: m3u8_url_clone.clone(),
                 filename: dest_path_clone.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string(),
                 total_size: bytes_downloaded,
                 downloaded: bytes_downloaded,
                 status: "baixando".to_string(),
                 id: Some(id_value_clone),
+                scope: Some(scope.to_string()),
             });
             // Pequeno delay para garantir que o frontend mostre 'baixando' (opcional, pode ajustar ou remover)
             std::thread::sleep(std::time::Duration::from_millis(400));
@@ -586,17 +564,19 @@ pub fn download_hls_file(
                 downloaded: bytes_downloaded,
                 status: "concluído".to_string(),
                 id: Some(id_value_clone),
+                scope: Some(scope.to_string()),
             };
-            crate::backend::download_progress::update_progress(&m3u8_url_clone, progress.clone());
+            crate::backend::download_progress::update_progress(progress_key, progress.clone());
             if let Some(w) = window {
-                // Atualiza user.json (main_urls) também
-                if let Some(username) = username {
-                    if let Err(_e) = crate::backend::user_service::update_main_url_progress(
-                        username.to_string(),
-                        m3u8_url_clone.clone(),
-                        1.0,
-                    ) {
-                        // log removido
+                if scope == "home" {
+                    if let Some(username) = username {
+                        if let Err(_e) = crate::backend::user_service::update_main_url_progress(
+                            username.to_string(),
+                            m3u8_url_clone.clone(),
+                            1.0,
+                        ) {
+                            // log removido
+                        }
                     }
                 }
                 let _ = w.emit("download-progress", serde_json::json!({
@@ -730,9 +710,12 @@ pub fn baixar_jmvstream(
     id: Option<u64>,
     username: Option<&str>,
     should_stop: Option<&std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    progress_key: Option<&str>,
+    source: Option<&str>,
 ) -> Result<(), String> {
+    let progress_key = progress_key.unwrap_or(m3u8_url);
+    let scope = source.unwrap_or("home");
     // Depuração: início do download JMVStream
-    println!("[DEBUG] Iniciando baixar_jmvstream para URL: {}", m3u8_url);
 
     // Se não há arquivo parcial (.ts) em andamento mas o destino final já existe,
     // Verifica arquivo parcial anterior com o nome original
@@ -742,10 +725,6 @@ pub fn baixar_jmvstream(
     // gera um nome único: video(1).mp4, video(2).mp4, etc.
     let final_dest: std::path::PathBuf = if existing_temp_size_check == 0 && dest_path.exists() {
         let u = unique_save_path(dest_path);
-        println!(
-            "[JMVSTREAM] arquivo '{}' já existe, usando nome único '{}'",
-            dest_path.display(), u.display()
-        );
         u
     } else {
         dest_path.to_path_buf()
@@ -754,7 +733,7 @@ pub fn baixar_jmvstream(
     let mut temp_dest = dest_path.to_path_buf();
     temp_dest.set_extension("ts");
     let existing_temp_size = std::fs::metadata(&temp_dest).map(|m| m.len()).unwrap_or(0);
-    let existing_progress = crate::backend::download_progress::get_progress(m3u8_url);
+    let existing_progress = crate::backend::download_progress::get_progress(progress_key);
     // Emite e salva status 'preparando' antes de calcular o tamanho
     let filename = dest_path.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string();
     if let Some(w) = window {
@@ -772,8 +751,9 @@ pub fn baixar_jmvstream(
         downloaded: existing_temp_size,
         status: "preparando".to_string(),
         id,
+        scope: Some(scope.to_string()),
     };
-    crate::backend::download_progress::update_progress(m3u8_url, progress_preparando);
+    crate::backend::download_progress::update_progress(progress_key, progress_preparando);
 
     // Calcula o tamanho total antes de iniciar
     let total_size = existing_progress
@@ -791,11 +771,23 @@ pub fn baixar_jmvstream(
         downloaded: existing_temp_size,
         status: "preparando".to_string(),
         id,
+        scope: Some(scope.to_string()),
     };
-    crate::backend::download_progress::update_progress(m3u8_url, progress.clone());
+    crate::backend::download_progress::update_progress(progress_key, progress.clone());
 
     // Chama o fluxo padrão de download HLS, mas agora o progresso já tem o tamanho real
-    download_hls_file(client, m3u8_url, dest_path, window, Some("download_progress"), id, username, should_stop)
+    download_hls_file(
+        client,
+        m3u8_url,
+        dest_path,
+        window,
+        Some("download_progress"),
+        id,
+        username,
+        should_stop,
+        Some(progress_key),
+        Some(scope),
+    )
 }
 
 

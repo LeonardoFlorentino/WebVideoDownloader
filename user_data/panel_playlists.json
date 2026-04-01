@@ -1,0 +1,25 @@
+{
+  "users": [
+    {
+      "username": "Leonardo",
+      "playlists": [
+        {
+          "id": "1775025575653",
+          "name": "Grego Moderno",
+          "links": [
+            {
+              "id": "17750273809970.8812078938692157",
+              "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/ir2643ep60a1x1b/h/4/1080/chunck_list_JMV.m3u8",
+              "filename": ""
+            },
+            {
+              "id": "17750273809970.39423642046217766",
+              "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/1080/chunck_list_JMV.m3u8",
+              "filename": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -10,22 +10,7 @@
       "username": "Leonardo",
       "password": "123",
       "playlists": [],
-      "main_urls": [
-        {
-          "id": 1,
-          "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/22ena3f8ih821il/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
-          "filename": "video_1.mp4",
-          "status": "concluído",
-          "progress": 1.0
-        },
-        {
-          "id": 2,
-          "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/1vl293hy201sl22/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
-          "filename": "video_2.mp4",
-          "status": "concluído",
-          "progress": 1.0
-        }
-      ]
+      "main_urls": []
     },
     {
       "username": "integration_test_user_3672427386",

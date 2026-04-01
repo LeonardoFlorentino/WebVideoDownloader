@@ -18,8 +18,20 @@ pub async fn resume_download(
     username: String,
     url: String,
     save_path: String,
+    progress_key: Option<String>,
+    source: Option<String>,
 ) -> Result<(), String> {
-    crate::commands::video::start_download(app, state, id, username, url, save_path).await
+    crate::commands::video::start_download(
+        app,
+        state,
+        id,
+        username,
+        url,
+        save_path,
+        progress_key,
+        source,
+    )
+    .await
 }
 
 #[tauri::command]

@@ -11,6 +11,8 @@ pub struct DownloadProgress {
     pub downloaded: u64,
     pub status: String, // "baixando", "pausado", "concluído", "erro"
     pub id: Option<u64>, // id numérico para eventos
+    #[serde(default)]
+    pub scope: Option<String>,
 }
 
 pub fn get_progress_file() -> PathBuf {
@@ -40,51 +42,62 @@ pub fn save_all_progress(map: &HashMap<String, DownloadProgress>) {
     }
 }
 
-pub fn update_progress(url: &str, progress: DownloadProgress) {
+pub fn update_progress(key: &str, progress: DownloadProgress) {
     let mut all = load_all_progress();
-    all.insert(url.to_string(), progress.clone());
+    all.insert(key.to_string(), progress.clone());
     save_all_progress(&all);
     // Log detalhado
     // log removido
 
     // Persistir porcentagem no user.json sempre que houver progresso
-    if let Some(username) = crate::backend::user_service::get_username_for_url(url) {
+    let should_sync_main_url = !matches!(progress.scope.as_deref(), Some("panel"));
+    if should_sync_main_url {
+        if let Some(username) = crate::backend::user_service::get_username_for_url(&progress.url) {
         let total = progress.total_size as f32;
         let downloaded = progress.downloaded as f32;
         let percent = if total > 0.0 { downloaded / total } else { 0.0 };
-        let _ = crate::backend::user_service::update_main_url_progress(username, url.to_string(), percent);
+            let _ = crate::backend::user_service::update_main_url_progress(
+                username,
+                progress.url.clone(),
+                percent,
+            );
+        }
     }
 }
 
-pub fn get_progress(url: &str) -> Option<DownloadProgress> {
+pub fn get_progress(key: &str) -> Option<DownloadProgress> {
     use std::collections::HashSet;
     use std::sync::Mutex;
     use once_cell::sync::Lazy;
     static LOGGED_MISSING: Lazy<Mutex<HashSet<String>>> = Lazy::new(|| Mutex::new(HashSet::new()));
     let all = load_all_progress();
-    let found = all.get(url);
+    let found = all.get(key);
     if let Some(p) = found {
         // log removido
         return Some(p.clone());
+    }
+    if !key.starts_with("http://") && !key.starts_with("https://") {
+        return None;
     }
     // Se não há progresso salvo, mas o arquivo existe e está completo, retorna progresso concluído
     // Tenta deduzir nome do arquivo salvo a partir da URL real
     let root = crate::backend::filesystem::get_project_root();
     let videos_dir = root.join("Vídeos baixados");
     // Extrai o nome real do arquivo da URL
-    let filename_from_url = url.split('/').last().unwrap_or("");
+    let filename_from_url = key.split('/').last().unwrap_or("");
     let file_path = videos_dir.join(filename_from_url);
     if file_path.exists() {
         let meta = std::fs::metadata(&file_path).ok();
         let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
         if size > 0 {
             let progress = DownloadProgress {
-                url: url.to_string(),
+                url: key.to_string(),
                 filename: filename_from_url.to_string(),
                 total_size: size,
                 downloaded: size,
                 status: "concluído".to_string(),
                 id: None,
+                scope: Some("home".to_string()),
             };
             // log removido
             return Some(progress);
@@ -92,15 +105,15 @@ pub fn get_progress(url: &str) -> Option<DownloadProgress> {
     }
     // Só loga uma vez por URL
     let mut logged = LOGGED_MISSING.lock().unwrap();
-    if !logged.contains(url) {
+    if !logged.contains(key) {
         // log removido
-        logged.insert(url.to_string());
+        logged.insert(key.to_string());
     }
     None
 }
 
-pub fn remove_progress(url: &str) {
+pub fn remove_progress(key: &str) {
     let mut all = load_all_progress();
-    all.remove(url);
+    all.remove(key);
     save_all_progress(&all);
 }

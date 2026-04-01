@@ -1,23 +1,38 @@
 #[allow(dead_code)]
 // Handles HLS and JMV downloads with window
 #[tauri::command]
-pub fn download_special_video(username: String, url: String, save_path: String, id: Option<u64>) -> CommandResult<()> {
-    let filename = std::path::Path::new(&save_path)
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("video.mp4").to_string();
+pub fn download_special_video(
+    username: String,
+    url: String,
+    save_path: String,
+    id: Option<u64>,
+    progress_key: Option<String>,
+    source: Option<String>,
+) -> CommandResult<()> {
     if url.ends_with(".m3u8") || url.contains(".m3u8?") || url.contains("player.jmvstream.com") {
         let username_clone = username.clone();
         let url_clone = url.clone();
-        let filename_clone = filename.clone();
-        let id_clone = id.clone();
+        let save_path_clone = save_path.clone();
+        let id_clone = id;
+        let progress_key_clone = progress_key.unwrap_or_else(|| url.clone());
+        let source_clone = source.unwrap_or_else(|| "home".to_string());
         std::thread::spawn(move || {
             let client = crate::backend::http_client_helper::create_blocking_client().unwrap();
-            let mut path = crate::backend::filesystem::get_project_root();
-            path.push("Vídeos baixados");
-            std::fs::create_dir_all(&path).ok();
-            path.push(&filename_clone);
-            let _ = crate::backend::download_helpers::baixar_jmvstream(&client, &url_clone, &path, None, id_clone, Some(&username_clone), None);
+            let path = std::path::PathBuf::from(&save_path_clone);
+            if let Some(parent) = path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = crate::backend::download_helpers::baixar_jmvstream(
+                &client,
+                &url_clone,
+                &path,
+                None,
+                id_clone,
+                Some(&username_clone),
+                None,
+                Some(&progress_key_clone),
+                Some(&source_clone),
+            );
         });
         return CommandResult { ok: true, data: Some(()), error: None };
     }
@@ -32,8 +47,13 @@ pub struct GetProgressResult {
 }
 
 #[tauri::command]
-pub fn get_progress_command(url: String) -> GetProgressResult {
-    match crate::backend::download_progress::get_progress(&url) {
+pub fn get_progress_command(url: Option<String>, progress_key: Option<String>) -> GetProgressResult {
+    let lookup_key = progress_key.or(url.clone());
+
+    match lookup_key
+        .as_deref()
+        .and_then(crate::backend::download_progress::get_progress)
+    {
         Some(progress) => GetProgressResult {
             ok: true,
             data: Some(progress),
@@ -61,45 +81,33 @@ pub async fn integrated_pause_download(
     state: tauri::State<'_, std::sync::Arc<DownloadManager>>,
     id: String,
     url: String,
+    progress_key: Option<String>,
     app: tauri::AppHandle,
 ) -> Result<(), String> {
-    println!(
-        "[PAUSE_INTEGRATED] requisicao recebida id='{}' url='{}'",
-        id, url
-    );
+    let progress_key = progress_key.unwrap_or_else(|| url.clone());
 
     // Atualiza progresso para "pausado"
-    if let Some(mut prog) = crate::backend::download_progress::get_progress(&url) {
+    if let Some(mut prog) = crate::backend::download_progress::get_progress(&progress_key) {
         prog.status = "pausado".to_string();
-        crate::backend::download_progress::update_progress(&url, prog);
+        crate::backend::download_progress::update_progress(&progress_key, prog);
     }
     // Seta flag global de pausa para downloads HLS
     {
         use crate::backend::download_helpers::PAUSE_FLAGS;
         let mut map = PAUSE_FLAGS.lock().unwrap();
         let flag = map
-            .entry(url.clone())
+            .entry(progress_key.clone())
             .or_insert_with(|| std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)))
             .clone();
         flag.store(true, std::sync::atomic::Ordering::SeqCst);
-        println!(
-            "[PAUSE_INTEGRATED] flag setada como TRUE para url='{}'",
-            url
-        );
     }
     // Aborta a task protegida pelo lock, mas solta o lock antes de emitir evento
-    let mut found_task = false;
     {
         let mut downloads = state.downloads.lock().unwrap();
         if let Some(task) = downloads.get_mut(&id) {
-            found_task = true;
             task.handle.abort();
         }
     }
-    println!(
-        "[PAUSE_INTEGRATED] id='{}' url='{}' task_encontrada={}",
-        id, url, found_task
-    );
     // Só emite evento depois de liberar o lock
     let _ = app.emit_to("all", "download_paused", serde_json::json!({ "url": url }));
     Ok(())
@@ -114,28 +122,34 @@ pub async fn start_download(
     username: String,
     url: String,
     save_path: String,
+    progress_key: Option<String>,
+    source: Option<String>,
 ) -> Result<(), String> {
+    let progress_key = progress_key.unwrap_or_else(|| url.clone());
+    let source = source.unwrap_or_else(|| "home".to_string());
+
     // Limpa eventual flag antiga de pausa para esta URL antes de iniciar/retomar.
     {
         use crate::backend::download_helpers::PAUSE_FLAGS;
         let map = PAUSE_FLAGS.lock().unwrap();
-        if let Some(flag) = map.get(&url) {
+        if let Some(flag) = map.get(&progress_key) {
             flag.store(false, std::sync::atomic::Ordering::SeqCst);
         }
     }
 
-    // Always ensure MainUrl entry exists before download
-    let _ = crate::backend::user_service::add_main_url(
-        username.clone(),
-        url.clone(),
-        Some(
-            std::path::Path::new(&save_path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("video.mp4")
-                .to_string(),
-        ),
-    );
+    if source == "home" {
+        let _ = crate::backend::user_service::add_main_url(
+            username.clone(),
+            url.clone(),
+            Some(
+                std::path::Path::new(&save_path)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("video.mp4")
+                    .to_string(),
+            ),
+        );
+    }
 
     // If HLS or JMV, return error to frontend to call download_special_video
     if url.ends_with(".m3u8") || url.contains(".m3u8?") || url.contains("player.jmvstream.com") {
@@ -143,8 +157,7 @@ pub async fn start_download(
     }
 
     // Fluxo padrão para arquivos diretos
-    // Garante que sempre exista progresso inicial salvo
-    if crate::backend::download_progress::get_progress(&url).is_none() {
+    if crate::backend::download_progress::get_progress(&progress_key).is_none() {
         let progress = crate::backend::download_progress::DownloadProgress {
             url: url.clone(),
             filename: std::path::Path::new(&save_path)
@@ -154,42 +167,55 @@ pub async fn start_download(
             total_size: 0,
             downloaded: 0,
             status: "baixando".to_string(),
-            id: None,
+            id: id.parse::<u64>().ok(),
+            scope: Some(source.clone()),
         };
-        crate::backend::download_progress::update_progress(&url, progress);
+        crate::backend::download_progress::update_progress(&progress_key, progress);
     }
     let manager = state.inner().clone();
     let id_clone = id.clone();
     let username_clone = username.clone();
     let url_clone = url.clone();
     let save_path_clone = save_path.clone();
+    let progress_key_clone = progress_key.clone();
+    let source_clone = source.clone();
     let app_clone = app.clone();
     let handle = tokio::spawn(async move {
-        // Flag de pausa por URL (tambem para download direto).
+        let filename = std::path::Path::new(&save_path_clone)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("video.mp4")
+            .to_string();
+        let progress_id = id_clone.parse::<u64>().ok();
+        let build_progress = |downloaded: u64, total_size: u64, status: &str| {
+            crate::backend::download_progress::DownloadProgress {
+                url: url_clone.clone(),
+                filename: filename.clone(),
+                total_size,
+                downloaded,
+                status: status.to_string(),
+                id: progress_id,
+                scope: Some(source_clone.clone()),
+            }
+        };
+
+        // Flag de pausa por chave lógica do download.
         let pause_flag = {
             use crate::backend::download_helpers::PAUSE_FLAGS;
             let mut map = PAUSE_FLAGS.lock().unwrap();
-            map.entry(url_clone.clone())
+            map.entry(progress_key_clone.clone())
                 .or_insert_with(|| {
                     std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false))
                 })
                 .clone()
         };
-
-            println!("[START_DOWNLOAD] INICIANDO download para url='{}' filename='{}' username='{}'", url_clone, save_path_clone, username_clone);
         use futures_util::StreamExt;
         use std::io::Write;
-        // Se o arquivo já existe mas é de uma URL diferente (sem progresso salvo = novo download),
-        // gera um nome único para não sobrescrever o arquivo concluído.
         let save_path_clone: String = {
             let p = std::path::Path::new(&save_path_clone);
-            let has_progress = crate::backend::download_progress::get_progress(&url_clone).is_some();
+            let has_progress = crate::backend::download_progress::get_progress(&progress_key_clone).is_some();
             if p.exists() && !has_progress {
                 let unique = crate::backend::download_helpers::unique_save_path(p);
-                println!(
-                    "[START_DOWNLOAD] arquivo '{}' já existe, usando nome único '{}'",
-                    p.display(), unique.display()
-                );
                 unique.to_string_lossy().into_owned()
             } else {
                 save_path_clone.clone()
@@ -226,10 +252,7 @@ pub async fn start_download(
                 return;
             }
         };
-        println!("[START_DOWNLOAD][HTTP] Status: {}", response.status());
-        let content_length = response.content_length().unwrap_or(0);
-        println!("[START_DOWNLOAD][HTTP] Content-Length: {}", content_length);
-        let mut total_size = response.content_length()
+                let mut total_size = response.content_length()
             .or_else(|| {
                 response.headers().get("content-range")
                     .and_then(|v| v.to_str().ok())
@@ -271,14 +294,18 @@ pub async fn start_download(
         let mut downloaded = current_size;
         let mut write_buffer = Vec::with_capacity(64 * 1024);
         let mut last_emit = std::time::Instant::now();
-        let mut last_terminal_log = std::time::Instant::now();
-        while let Some(chunk) = stream.next().await {
-            // Interrompe definitivamente quando pausado (nao cai em completed).
+                while let Some(chunk) = stream.next().await {
             if pause_flag.load(std::sync::atomic::Ordering::SeqCst) {
-                let _ = crate::backend::user_service::update_main_url_status(
-                    username_clone.clone(),
-                    url_clone.clone(),
-                    "pausado".to_string(),
+                if source_clone == "home" {
+                    let _ = crate::backend::user_service::update_main_url_status(
+                        username_clone.clone(),
+                        url_clone.clone(),
+                        "pausado".to_string(),
+                    );
+                }
+                crate::backend::download_progress::update_progress(
+                    &progress_key_clone,
+                    build_progress(downloaded, total_size, "pausado"),
                 );
                 let _ = app_clone.emit_to("all", "download-progress", super::download_manager::ProgressPayload {
                     id: id_clone.clone(),
@@ -293,7 +320,10 @@ pub async fn start_download(
             let chunk = match chunk {
                 Ok(c) => c,
                 Err(e) => {
-                    println!("[START_DOWNLOAD][ERRO] erro ao receber chunk: {}", e);
+                    crate::backend::download_progress::update_progress(
+                        &progress_key_clone,
+                        build_progress(downloaded, total_size, "erro"),
+                    );
                     let _ = app_clone.emit_to("all", "download_finished", serde_json::json!({
                         "url": url_clone,
                         "status": "erro",
@@ -306,7 +336,10 @@ pub async fn start_download(
             downloaded += chunk.len() as u64;
             if write_buffer.len() >= 64 * 1024 {
                 if let Err(e) = file.write_all(&write_buffer) {
-                    println!("[START_DOWNLOAD][ERRO] erro ao escrever chunk: {}", e);
+                    crate::backend::download_progress::update_progress(
+                        &progress_key_clone,
+                        build_progress(downloaded, total_size, "erro"),
+                    );
                     let _ = app_clone.emit_to("all", "download_finished", serde_json::json!({
                         "url": url_clone,
                         "status": "erro",
@@ -316,33 +349,24 @@ pub async fn start_download(
                 }
                 write_buffer.clear();
             }
-            if last_terminal_log.elapsed().as_secs() >= 5 {
-                let percent = if total_size > 0 {
-                    ((downloaded as f64 / total_size as f64) * 100.0).clamp(0.0, 100.0)
-                } else {
-                    0.0
-                };
-                println!(
-                    "[START_DOWNLOAD][PROGRESSO] id='{}' {:.1}% ({}/{}) url='{}'",
-                    id_clone,
-                    percent,
-                    downloaded,
-                    total_size,
-                    url_clone
-                );
-                last_terminal_log = std::time::Instant::now();
-            }
+            
             if last_emit.elapsed().as_millis() > 500 {
-                let progress = if total_size > 0 {
-                    downloaded as f32 / total_size as f32
-                } else {
-                    0.0
-                };
-                let _ = crate::backend::user_service::update_main_url_progress(
-                    username_clone.clone(),
-                    url_clone.clone(),
-                    progress,
+                crate::backend::download_progress::update_progress(
+                    &progress_key_clone,
+                    build_progress(downloaded, total_size, "baixando"),
                 );
+                if source_clone == "home" {
+                    let progress = if total_size > 0 {
+                        downloaded as f32 / total_size as f32
+                    } else {
+                        0.0
+                    };
+                    let _ = crate::backend::user_service::update_main_url_progress(
+                        username_clone.clone(),
+                        url_clone.clone(),
+                        progress,
+                    );
+                }
                 let _ = app_clone.emit_to("all", "download-progress", super::download_manager::ProgressPayload {
                     id: id_clone.clone(),
                     progress: downloaded,
@@ -352,12 +376,17 @@ pub async fn start_download(
                 last_emit = std::time::Instant::now();
             }
         }
-        // Checagem final de pausa antes de concluir.
         if pause_flag.load(std::sync::atomic::Ordering::SeqCst) {
-            let _ = crate::backend::user_service::update_main_url_status(
-                username_clone.clone(),
-                url_clone.clone(),
-                "pausado".to_string(),
+            if source_clone == "home" {
+                let _ = crate::backend::user_service::update_main_url_status(
+                    username_clone.clone(),
+                    url_clone.clone(),
+                    "pausado".to_string(),
+                );
+            }
+            crate::backend::download_progress::update_progress(
+                &progress_key_clone,
+                build_progress(downloaded, total_size, "pausado"),
             );
             let _ = app_clone.emit_to("all", "download-progress", super::download_manager::ProgressPayload {
                 id: id_clone.clone(),
@@ -372,17 +401,22 @@ pub async fn start_download(
         if !write_buffer.is_empty() {
             let _ = file.write_all(&write_buffer);
         }
-        println!("[START_DOWNLOAD] FINALIZADO download para url='{}' filename='{}' username='{}' tamanho={} bytes", url_clone, save_path_clone, username_clone, downloaded);
-        let progress = if total_size > 0 {
-            downloaded as f32 / total_size as f32
-        } else {
-            1.0
-        };
-        let _ = crate::backend::user_service::update_main_url_progress(
-            username_clone.clone(),
-            url_clone.clone(),
-            progress,
+        crate::backend::download_progress::update_progress(
+            &progress_key_clone,
+            build_progress(downloaded, total_size, "concluído"),
         );
+        if source_clone == "home" {
+            let progress = if total_size > 0 {
+                downloaded as f32 / total_size as f32
+            } else {
+                1.0
+            };
+            let _ = crate::backend::user_service::update_main_url_progress(
+                username_clone.clone(),
+                url_clone.clone(),
+                progress,
+            );
+        }
         let _ = app_clone.emit_to("all", "download-progress", super::download_manager::ProgressPayload {
             id: id_clone,
             progress: downloaded,
@@ -399,7 +433,6 @@ pub async fn start_download(
 
 #[tauri::command]
 pub fn download_video(window: Window, username: String, url: String, filename: String, id: Option<u64>) -> CommandResult<()> {
-    println!("[TAURI][download_video] chamado para url='{}' filename='{}' username='{}'", url, filename, username);
     let window_clone = window.clone();
     let username_clone = username.clone();
     let url_clone = url.clone();
@@ -411,14 +444,14 @@ pub fn download_video(window: Window, username: String, url: String, filename: S
                 path.push("Vídeos baixados");
                 std::fs::create_dir_all(&path).ok();
                 path.push(&filename_clone);
-                crate::backend::download_helpers::baixar_jmvstream(&client, &url_clone, &path, Some(&window_clone), id, Some(&username_clone), None)
+                crate::backend::download_helpers::baixar_jmvstream(&client, &url_clone, &path, Some(&window_clone), id, Some(&username_clone), None, None, None)
             } else if url_clone.ends_with(".m3u8") || url_clone.contains(".m3u8?") {
                 let client = crate::backend::http_client_helper::create_blocking_client().unwrap();
                 let mut path = crate::backend::filesystem::get_project_root();
                 path.push("Vídeos baixados");
                 std::fs::create_dir_all(&path).ok();
                 path.push(&filename_clone);
-                crate::backend::download_helpers::baixar_jmvstream(&client, &url_clone, &path, Some(&window_clone), id, Some(&username_clone), None)
+                crate::backend::download_helpers::baixar_jmvstream(&client, &url_clone, &path, Some(&window_clone), id, Some(&username_clone), None, None, None)
             } else {
                 baixar_video_emit(Some(&window_clone), &url_clone, &filename_clone)
             };

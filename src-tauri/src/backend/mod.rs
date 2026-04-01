@@ -7,6 +7,8 @@ pub mod filesystem;
 pub mod listing;
 pub mod playlist;
 pub mod playlist_service;
+pub mod panel_playlist;
+pub mod panel_playlist_service;
 pub mod user;
 pub mod user_service;
 pub mod download_helpers;

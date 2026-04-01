@@ -1,11 +1,21 @@
 {
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/22ena3f8ih821il/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/22ena3f8ih821il/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=arbrhj29dqup89",
+  "panel:Leonardo:1775025575653:17750273809970.8812078938692157": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/ir2643ep60a1x1b/h/4/1080/chunck_list_JMV.m3u8",
     "filename": "video_1.mp4",
-    "total_size": 326621988,
-    "downloaded": 326621988,
+    "total_size": 531725664,
+    "downloaded": 531725664,
     "status": "concluído",
-    "id": 1
+    "id": 1,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775025575653:17750273809970.39423642046217766": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/1080/chunck_list_JMV.m3u8",
+    "filename": "video_2.mp4",
+    "total_size": 805735288,
+    "downloaded": 805735288,
+    "status": "concluído",
+    "id": 2,
+    "scope": "panel"
   },
   "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/22x00fawq280bt1/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=l86u0cx7v250": {
     "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/22x00fawq280bt1/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=l86u0cx7v250",
@@ -13,7 +23,8 @@
     "total_size": 643013016,
     "downloaded": 643013016,
     "status": "concluído",
-    "id": 1
+    "id": 1,
+    "scope": null
   },
   "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/a54dh16q3hl2w1s/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
     "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/a54dh16q3hl2w1s/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
@@ -21,14 +32,7 @@
     "total_size": 414318724,
     "downloaded": 414318724,
     "status": "concluído",
-    "id": 1
-  },
-  "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/1vl293hy201sl22/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/1vl293hy201sl22/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
-    "filename": "video_2.mp4",
-    "total_size": 823480044,
-    "downloaded": 823480044,
-    "status": "concluído",
-    "id": 2
+    "id": 1,
+    "scope": null
   }
 }
