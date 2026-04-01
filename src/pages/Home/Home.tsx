@@ -22,12 +22,27 @@ import {
   DownloadAllButton,
   EmptyMessage,
   FileNameInput,
-  ButtonRow
+  ButtonRow,
 } from "./Home.styles";
 
-
-
 type HomeProps = { username: string };
+
+function normalizeStatus(status?: string): string {
+  switch ((status || "").toLowerCase()) {
+    case "downloading":
+      return "baixando";
+    case "completed":
+    case "concluido":
+      return "concluído";
+    case "paused":
+      return "pausado";
+    case "error":
+      return "erro";
+    default:
+      return status || "pendente";
+  }
+}
+
 function Home({ username }: HomeProps) {
   const { downloads, setDownloads } = useDownloads() as {
     downloads: Download[];
@@ -35,17 +50,26 @@ function Home({ username }: HomeProps) {
   };
 
   // Polling eficiente: só ativa quando houver downloads ativos, sem depender de downloads no useEffect
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const hasActiveDownloads = downloads.some((d) => d.status !== "concluído" && d.status !== "erro");
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasActiveDownloads = downloads.some(
+    (d) =>
+      normalizeStatus(d.status) !== "concluído" &&
+      normalizeStatus(d.status) !== "erro",
+  );
   useEffect(() => {
     if (!username) return;
     // Inicia polling apenas uma vez quando houver downloads ativos
     if (hasActiveDownloads && !pollingRef.current) {
       const poll = async () => {
-        const { pollDownloadsProgress } = await import("../../service/pollDownloadsProgress");
+        const { pollDownloadsProgress } =
+          await import("../../service/pollDownloadsProgress");
         setDownloads((prev) => {
           // Checa se ainda há downloads ativos
-          const stillActive = prev.some((d) => d.status !== "concluído" && d.status !== "erro");
+          const stillActive = prev.some(
+            (d) =>
+              normalizeStatus(d.status) !== "concluído" &&
+              normalizeStatus(d.status) !== "erro",
+          );
           if (!stillActive) {
             if (pollingRef.current) {
               clearInterval(pollingRef.current);
@@ -59,7 +83,9 @@ function Home({ username }: HomeProps) {
           return prev;
         });
       };
-      pollingRef.current = setInterval(() => { void poll(); }, 3000);
+      pollingRef.current = setInterval(() => {
+        void poll();
+      }, 3000);
       void poll();
     }
     // Cleanup ao desmontar
@@ -76,26 +102,60 @@ function Home({ username }: HomeProps) {
   const handleDownload = async (id: number, action?: "pause" | "resume") => {
     const d = downloads.find((x: Download) => x.id === id);
     if (!d) return;
-    const fileNameFinal = d.filename.endsWith(".mp4") ? d.filename : `${d.filename}.mp4`;
+    const fileNameFinal = d.filename.endsWith(".mp4")
+      ? d.filename
+      : `${d.filename}.mp4`;
     if (action === "pause") {
-      setPausando((prev: { [url: string]: boolean }) => ({ ...prev, [d.url]: true }));
-      import("../../service/pauseDownloadById").then(({ pauseDownloadById }) =>
-        pauseDownloadById(d.id, d.url)
-          .catch(() => toast.error("Erro ao pausar download"))
-          .finally(() => setPausando((prev: { [url: string]: boolean }) => ({ ...prev, [d.url]: false }))));
+      setPausando((prev: { [url: string]: boolean }) => ({
+        ...prev,
+        [d.url]: true,
+      }));
+      // Atualiza status no front imediatamente para refletir clique do usuário.
+      setDownloads((ds: Download[]) =>
+        ds.map((x: Download) =>
+          x.id === id ? { ...x, status: "pausado" } : x,
+        ),
+      );
+      try {
+        const { pauseDownloadById } =
+          await import("../../service/pauseDownloadById");
+        await pauseDownloadById(d.id, d.url);
+      } catch {
+        // Se falhar, retorna ao estado anterior para não mascarar erro real.
+        setDownloads((ds: Download[]) =>
+          ds.map((x: Download) =>
+            x.id === id ? { ...x, status: d.status } : x,
+          ),
+        );
+        toast.error("Erro ao pausar download");
+      } finally {
+        setPausando((prev: { [url: string]: boolean }) => ({
+          ...prev,
+          [d.url]: false,
+        }));
+      }
       return;
     }
     if (action === "resume") {
       const savePath = `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${fileNameFinal}`;
+      // Restaura o progresso anterior (não reseta para 0%)
+      setDownloads((ds: Download[]) =>
+        ds.map((x: Download) =>
+          x.id === id
+            ? { ...x, status: "baixando", progress: x.progress, total: x.total }
+            : x,
+        ),
+      );
       import("../../service/resumeDownload").then(({ resumeDownloadTauri }) => {
         resumeDownloadTauri(String(d.id), username, d.url, savePath).catch(
-          () => {
+          (err: unknown) => {
             setDownloads((ds: Download[]) =>
               ds.map((x: Download) =>
-                x.id === id ? { ...x, status: "erro", progress: 0 } : x,
+                x.id === id ? { ...x, status: "pausado" } : x,
               ),
             );
-            toast.error("Erro ao retomar download");
+            const msg = err instanceof Error ? err.message : String(err);
+            toast.error(`Erro ao retomar download: ${msg}`);
           },
         );
       });
@@ -145,7 +205,7 @@ function Home({ username }: HomeProps) {
                 filename: item.filename || `video_${idx + 1}`,
                 ext: "mp4",
                 progress: typeof item.progress === "number" ? item.progress : 0,
-                status: item.status || "pendente",
+                status: normalizeStatus(item.status),
                 canceled: false,
                 playlist: "",
               };
@@ -185,7 +245,7 @@ function Home({ username }: HomeProps) {
                 ...d,
                 progress,
                 total,
-                status // usa exatamente o status do backend
+                status: normalizeStatus(status),
               };
             }
             return d;
@@ -205,14 +265,15 @@ function Home({ username }: HomeProps) {
             // - a url bater
             // - o status atual for 'baixando' (ou seja, só quem estava baixando pode ser concluído)
             if (d.url !== url) return d;
-            if (d.status === "pausado") {
+            if (normalizeStatus(d.status) === "pausado") {
               return { ...d, error: error || undefined };
             }
-            if (d.status === "baixando") {
+            if (normalizeStatus(d.status) === "baixando") {
               return {
                 ...d,
-                status: status === "concluido" ? "concluído" : status,
-                progress: status === "concluido" ? 100 : d.progress,
+                status: normalizeStatus(status),
+                progress:
+                  normalizeStatus(status) === "concluído" ? 100 : d.progress,
                 error: error || undefined,
               };
             }
@@ -252,7 +313,9 @@ function Home({ username }: HomeProps) {
           return;
         }
       }
-      setDownloads((prev: Download[]) => prev.filter((d: Download) => d.id !== id));
+      setDownloads((prev: Download[]) =>
+        prev.filter((d: Download) => d.id !== id),
+      );
     } catch (err) {
       let msg = "Erro ao remover vídeo.";
       if (
@@ -278,7 +341,9 @@ function Home({ username }: HomeProps) {
     setDownloadingAll(true);
     downloads.forEach((d: Download) => {
       if (d.status === "pendente") {
-        const filenameFinal = d.filename.endsWith(".mp4") ? d.filename : `${d.filename}.mp4`;
+        const filenameFinal = d.filename.endsWith(".mp4")
+          ? d.filename
+          : `${d.filename}.mp4`;
         baixarVideoTauri(
           String(d.id),
           username,
