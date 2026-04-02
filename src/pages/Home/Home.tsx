@@ -437,8 +437,14 @@ function Home({ username }: HomeProps) {
   };
 
   const handleLogout = () => {
-    // Aqui você pode limpar o token/autenticação se necessário
-    navigate("/login");
+    localStorage.removeItem("loginToken");
+    localStorage.removeItem("lastUser");
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "loginToken",
+      }),
+    );
+    navigate("/login", { replace: true });
   };
 
   const handleGoToPanel = () => {
@@ -504,6 +510,7 @@ function Home({ username }: HomeProps) {
         pauseOnFocusLoss
         draggable
         pauseOnHover
+        theme="light"
       />
       <TopBar>
         <div>

@@ -1,11 +1,29 @@
 {
-  "panel:Leonardo:1775025575653:17750273809970.8812078938692157": {
-    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/ir2643ep60a1x1b/h/4/1080/chunck_list_JMV.m3u8",
+  "panel:Leonardo:1775103547013:17751035470130.4386406218310046": {
+    "url": "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
     "filename": "video_1.mp4",
-    "total_size": 531725664,
-    "downloaded": 531725664,
+    "total_size": 43315070,
+    "downloaded": 43315070,
     "status": "concluído",
-    "id": 1,
+    "id": null,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775103222882:17751032228820.7373416962252021": {
+    "url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
+    "filename": "video_1.mp4",
+    "total_size": 31182285,
+    "downloaded": 31182285,
+    "status": "concluído",
+    "id": null,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775089015895:17750890158950.3538705443809159": {
+    "url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
+    "filename": "video_2.mp4",
+    "total_size": 574823,
+    "downloaded": 574823,
+    "status": "concluído",
+    "id": null,
     "scope": "panel"
   },
   "panel:Leonardo:1775025575653:17750273809970.39423642046217766": {
@@ -17,6 +35,33 @@
     "id": 2,
     "scope": "panel"
   },
+  "panel:Leonardo:1775103222882:17751032228820.16073237336511204": {
+    "url": "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
+    "filename": "video_2.mp4",
+    "total_size": 574823,
+    "downloaded": 574823,
+    "status": "concluído",
+    "id": null,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775101469190:17751014691900.9179304536139964": {
+    "url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
+    "filename": "video_2.mp4",
+    "total_size": 574823,
+    "downloaded": 574823,
+    "status": "concluído",
+    "id": null,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775025575653:17750273809970.8812078938692157": {
+    "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/ir2643ep60a1x1b/h/4/1080/chunck_list_JMV.m3u8",
+    "filename": "video_1.mp4",
+    "total_size": 531725664,
+    "downloaded": 531725664,
+    "status": "concluído",
+    "id": 1,
+    "scope": "panel"
+  },
   "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/22x00fawq280bt1/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=l86u0cx7v250": {
     "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/22x00fawq280bt1/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=l86u0cx7v250",
     "filename": "video_1.mp4",
@@ -26,6 +71,51 @@
     "id": 1,
     "scope": null
   },
+  "panel:Leonardo:1775103482298:17751034822980.03696170229513496": {
+    "url": "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
+    "filename": "video_3.mp4",
+    "total_size": 43315070,
+    "downloaded": 43315070,
+    "status": "concluído",
+    "id": null,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775103482298:17751034822980.44181037084499253": {
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+    "filename": "video_1.mp4",
+    "total_size": 31182285,
+    "downloaded": 31182285,
+    "status": "concluído",
+    "id": null,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775101469190:17751014691900.19967571581413868": {
+    "url": "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
+    "filename": "video_3.mp4",
+    "total_size": 43315070,
+    "downloaded": 43315070,
+    "status": "concluído",
+    "id": null,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775089015895:17750890158950.02422253297147292": {
+    "url": "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
+    "filename": "video_1.mp4",
+    "total_size": 43315070,
+    "downloaded": 43315070,
+    "status": "concluído",
+    "id": null,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775103222882:17751032228820.06514628032551284": {
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+    "filename": "video_3.mp4",
+    "total_size": 43315070,
+    "downloaded": 43315070,
+    "status": "concluído",
+    "id": null,
+    "scope": "panel"
+  },
   "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/a54dh16q3hl2w1s/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4": {
     "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/a54dh16q3hl2w1s/h/4/1080/chunck_list_JMV.m3u8?uf085lum5fbz=fg31576preu4",
     "filename": "video_2.mp4",
@@ -34,5 +124,50 @@
     "status": "concluído",
     "id": 1,
     "scope": null
+  },
+  "panel:Leonardo:1775103482298:17751034822980.8101946325378302": {
+    "url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
+    "filename": "video_2.mp4",
+    "total_size": 574823,
+    "downloaded": 574823,
+    "status": "concluído",
+    "id": null,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775103547013:17751035470130.7036906659331044": {
+    "url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
+    "filename": "video_3.mp4",
+    "total_size": 574823,
+    "downloaded": 574823,
+    "status": "concluído",
+    "id": null,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775089015895:17750890158950.2594678783905121": {
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+    "filename": "video_3.mp4",
+    "total_size": 31182285,
+    "downloaded": 31182285,
+    "status": "concluído",
+    "id": 3,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775103547013:17751035470130.46129009954257216": {
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+    "filename": "video_2.mp4",
+    "total_size": 31182285,
+    "downloaded": 31182285,
+    "status": "concluído",
+    "id": 2,
+    "scope": "panel"
+  },
+  "panel:Leonardo:1775101469190:17751014691900.27826753502849844": {
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+    "filename": "video_1.mp4",
+    "total_size": 31182285,
+    "downloaded": 31182285,
+    "status": "concluído",
+    "id": 1,
+    "scope": "panel"
   }
 }

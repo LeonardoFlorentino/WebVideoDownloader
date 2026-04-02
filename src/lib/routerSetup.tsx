@@ -3,7 +3,6 @@ import LoginScreen from "../pages/LoginScreen/LoginScreen";
 import RegisterScreen from "../pages/RegisterScreen/RegisterScreen";
 import Home from "../pages/Home/Home";
 import UserPanel from "../pages/UserPanel/UserPanel";
-import PlaylistPanel from "../pages/PlaylistPanel/PlaylistPanel";
 
 import type { User } from "@/types/user";
 
@@ -54,13 +53,7 @@ export default function RouterSetup({
         />
         <Route
           path="/playlists"
-          element={
-            user ? (
-              <PlaylistPanel playlists={[]} onDownload={() => {}} />
-            ) : (
-              <Navigate to="/login" />
-            )
-          }
+          element={user ? <UserPanel /> : <Navigate to="/login" />}
         />
       </Routes>
     </BrowserRouter>

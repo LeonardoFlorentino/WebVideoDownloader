@@ -44,14 +44,18 @@ function App() {
       }
     };
     updateUserFromToken();
-    // Escuta mudanças no localStorage (login/logout em outras abas)
-    window.addEventListener("storage", (e) => {
+
+    const handleStorage = (e: StorageEvent) => {
       if (e.key === "loginToken") {
         updateUserFromToken();
       }
-    });
+    };
+
+    // Escuta mudanças no localStorage (login/logout em outras abas)
+    window.addEventListener("storage", handleStorage);
+
     return () => {
-      window.removeEventListener("storage", updateUserFromToken);
+      window.removeEventListener("storage", handleStorage);
     };
   }, []);
 

@@ -4,6 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { Container, Card, IconCircle, Title, Subtitle, Form, Input, Button, ButtonAlt, ErrorMsg, SuccessMsg, TitleWrapper } from './RegisterScreen.styles';
 import { invoke } from '@tauri-apps/api/core';
 
+type CommandResult<T> = {
+  ok: boolean;
+  data?: T;
+  error?: string;
+};
 
 export default function RegisterScreen({ onRegister }: { onRegister: () => void }) {
   const [username, setUsername] = useState('');
@@ -24,7 +29,18 @@ export default function RegisterScreen({ onRegister }: { onRegister: () => void 
         setLoading(false);
         return;
       }
-      await invoke('cadastrar_usuario', { username, password });
+
+      const result = await invoke('register_user', {
+        username,
+        password,
+      }) as CommandResult<null>;
+
+      if (!result?.ok) {
+        setError(result?.error || 'Erro ao cadastrar usuário');
+        setLoading(false);
+        return;
+      }
+
       setSuccess(true);
       setTimeout(() => {
         onRegister();

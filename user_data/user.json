@@ -59,6 +59,18 @@
       "password": "integration_test_pass",
       "playlists": [],
       "main_urls": []
+    },
+    {
+      "username": "Fernando",
+      "password": "123",
+      "playlists": [],
+      "main_urls": []
+    },
+    {
+      "username": "Gustavo",
+      "password": "123",
+      "playlists": [],
+      "main_urls": []
     }
   ]
 }

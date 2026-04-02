@@ -28,3 +28,17 @@ export async function replacePanelPlaylists(
     throw new Error(result?.error || "Erro ao salvar playlists do painel");
   }
 }
+
+export async function deletePlaylist(
+  username: string,
+  playlistId: string,
+): Promise<void> {
+  const result = (await invoke("delete_playlist_command", {
+    username,
+    playlistId,
+  })) as CommandResult<null>;
+
+  if (!result?.ok) {
+    throw new Error(result?.error || "Erro ao deletar playlist");
+  }
+}

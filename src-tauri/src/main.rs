@@ -7,12 +7,14 @@ use commands::video::{
     start_download,
     integrated_pause_download,
     get_progress_command,
+    sync_download_file_state_command,
     download_special_video,
 };
 use commands::auth::{register_user, authenticate_user};
 use commands::panel_playlist::{
     get_panel_playlists_command,
     replace_panel_playlists_command,
+    delete_playlist_command,
 };
 use commands::user::{add_main_url_command, get_main_urls_command, update_main_url_title_command, remove_main_url_command};
 use commands::remove_main_url_by_id_command;
@@ -35,6 +37,7 @@ fn main() {
             authenticate_user,
             get_panel_playlists_command,
             replace_panel_playlists_command,
+            delete_playlist_command,
             add_main_url_command,
             get_main_urls_command,
             update_main_url_title_command,
@@ -49,6 +52,7 @@ fn main() {
             resume_download,
             integrated_pause_download,
             get_progress_command,
+            sync_download_file_state_command,
             download_special_video,
         ])
         .run(tauri::generate_context!())

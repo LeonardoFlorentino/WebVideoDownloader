@@ -35,3 +35,6 @@ Thumbs.db
 # Tauri
 src-tauri/target/
 src-tauri/Vídeos baixados/
+# Evita que arquivos .mp4 em public/demos sejam versionados
+public/demos/*.mp4
+.mp4

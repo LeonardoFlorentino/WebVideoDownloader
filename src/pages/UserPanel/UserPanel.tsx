@@ -45,10 +45,17 @@ import {
   WelcomeHeaderRow,
   PlaylistCardHeader,
   EditButton,
+  DeleteButton,
   CreateButton,
   SubmitButton,
   NoLinkItem,
   CancelButton,
+  ConfirmModal,
+  ConfirmTitle,
+  ConfirmText,
+  ConfirmActions,
+  ConfirmCancelButton,
+  ConfirmDeleteButton,
 } from "./UserPanel.styles";
 import { NavButton } from "../Home/Home.styles";
 import type { Playlist } from "@/types/playlist";
@@ -66,6 +73,12 @@ type LinkDownloadState = {
   status: string;
   progress: number;
   total: number;
+};
+
+type ProgressCommandResult = {
+  ok: boolean;
+  data?: { downloaded?: number; total_size?: number; status?: string };
+  error?: string;
 };
 
 type CascadeControlState = {
@@ -117,7 +130,9 @@ const UserPanel: React.FC = () => {
         }
 
         const legacyData = localStorage.getItem(`playlists_${username}`);
-        const legacyPlaylists = legacyData ? (JSON.parse(legacyData) as Playlist[]) : [];
+        const legacyPlaylists = legacyData
+          ? (JSON.parse(legacyData) as Playlist[])
+          : [];
 
         if (legacyPlaylists.length > 0) {
           await replacePanelPlaylists(username, legacyPlaylists);
@@ -148,6 +163,9 @@ const UserPanel: React.FC = () => {
     { url: string; filename: string }[]
   >([{ url: "", filename: "" }]);
   const [editId, setEditId] = React.useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(
+    null,
+  );
   const [cascadeState, setCascadeState] = React.useState<{
     [playlistId: string]: CascadeControlState;
   }>({});
@@ -190,7 +208,11 @@ const UserPanel: React.FC = () => {
               progressKey: progressKeyForLink(playlist.id, link.id),
             })) as {
               ok: boolean;
-              data?: { downloaded?: number; total_size?: number; status?: string };
+              data?: {
+                downloaded?: number;
+                total_size?: number;
+                status?: string;
+              };
             };
 
             if (result?.ok && result.data) {
@@ -240,7 +262,9 @@ const UserPanel: React.FC = () => {
             status === "preparando" ||
             status === "convertendo",
         );
-        const pausedIndex = statuses.findIndex((status) => status === "pausado");
+        const pausedIndex = statuses.findIndex(
+          (status) => status === "pausado",
+        );
 
         if (activeIndex >= 0) {
           next[playlist.id] = {
@@ -267,7 +291,8 @@ const UserPanel: React.FC = () => {
         );
 
         next[playlist.id] = {
-          index: firstPendingIndex >= 0 ? firstPendingIndex : playlist.links.length,
+          index:
+            firstPendingIndex >= 0 ? firstPendingIndex : playlist.links.length,
           downloading: false,
           paused: false,
           currentId: prev[playlist.id]?.currentId,
@@ -283,7 +308,9 @@ const UserPanel: React.FC = () => {
   }, [syncPlaylistProgress]);
 
   React.useEffect(() => {
-    const hasTrackedLinks = playlists.some((playlist) => playlist.links.length > 0);
+    const hasTrackedLinks = playlists.some(
+      (playlist) => playlist.links.length > 0,
+    );
     if (!hasTrackedLinks) return;
 
     const timer = window.setInterval(() => {
@@ -305,8 +332,37 @@ const UserPanel: React.FC = () => {
     link: { url: string; filename?: string },
   ) => {
     const safeName = (link.filename || `video_${idx + 1}`).trim();
-    const filenameFinal = safeName.endsWith(".mp4") ? safeName : `${safeName}.mp4`;
+    const filenameFinal = safeName.endsWith(".mp4")
+      ? safeName
+      : `${safeName}.mp4`;
     return `C:/Users/leona/projects/WebVideoDownloader/Vídeos baixados/${playlistName}/${filenameFinal}`;
+  };
+
+  const syncLinkWithDisk = async (
+    playlistId: string,
+    playlistName: string,
+    idx: number,
+    link: { id: string; url: string; filename?: string },
+  ): Promise<LinkDownloadState> => {
+    const result = (await invoke("sync_download_file_state_command", {
+      url: link.url,
+      savePath: savePathForLink(playlistName, idx, link),
+      progressKey: progressKeyForLink(playlistId, link.id),
+      source: "panel",
+    })) as ProgressCommandResult;
+
+    const nextState = {
+      status: normalizeStatus(result?.data?.status),
+      progress: Number(result?.data?.downloaded || 0),
+      total: Number(result?.data?.total_size || 0),
+    };
+
+    setLinkProgress((prev) => ({
+      ...prev,
+      [linkKey(playlistId, idx)]: nextState,
+    }));
+
+    return nextState;
   };
 
   const waitForTerminalStatus = async (
@@ -343,7 +399,11 @@ const UserPanel: React.FC = () => {
           delete resumeGuardRef.current[key];
         }
 
-        if (status === "concluído" || status === "erro" || status === "pausado") {
+        if (
+          status === "concluído" ||
+          status === "erro" ||
+          status === "pausado"
+        ) {
           return status;
         }
       } catch {
@@ -373,6 +433,24 @@ const UserPanel: React.FC = () => {
       }
 
       const link = links[idx];
+      if (!resumeCurrent) {
+        const diskState = await syncLinkWithDisk(
+          playlistId,
+          playlistName,
+          idx,
+          link,
+        );
+        if (diskState.status === "concluído") {
+          updateCascadeForPlaylist(playlistId, (prev) => ({
+            ...(prev || { index: idx + 1, downloading: false, paused: false }),
+            index: idx + 1,
+            downloading: idx + 1 < links.length,
+            paused: false,
+          }));
+          continue;
+        }
+      }
+
       const downloadId = latest?.currentId || `${Date.now()}_${idx}`;
       const savePath = savePathForLink(playlistName, idx, link);
 
@@ -394,15 +472,27 @@ const UserPanel: React.FC = () => {
               total: prev[linkKey(playlistId, idx)]?.total || 0,
             },
           }));
-          await resumeDownloadTauri(downloadId, username || "", link.url, savePath, {
-            progressKey: progressKeyForLink(playlistId, link.id),
-            source: "panel",
-          });
+          await resumeDownloadTauri(
+            downloadId,
+            username || "",
+            link.url,
+            savePath,
+            {
+              progressKey: progressKeyForLink(playlistId, link.id),
+              source: "panel",
+            },
+          );
         } else {
-          await baixarVideoTauri(downloadId, username || "", link.url, savePath, {
-            progressKey: progressKeyForLink(playlistId, link.id),
-            source: "panel",
-          });
+          await baixarVideoTauri(
+            downloadId,
+            username || "",
+            link.url,
+            savePath,
+            {
+              progressKey: progressKeyForLink(playlistId, link.id),
+              source: "panel",
+            },
+          );
         }
       } catch (err) {
         setLinkProgress((prev) => ({
@@ -454,7 +544,6 @@ const UserPanel: React.FC = () => {
     toast.success("Download em cascata finalizado!", {
       position: "top-center",
       autoClose: 2000,
-      theme: "dark",
     });
   };
 
@@ -470,12 +559,38 @@ const UserPanel: React.FC = () => {
       toast.error(`Erro ao criar pasta da playlist: ${err}`);
       return;
     }
+
+    const reconciledStates = await Promise.all(
+      links.map((link, idx) =>
+        syncLinkWithDisk(playlistId, playlistName, idx, link),
+      ),
+    );
+    const startIndex = reconciledStates.findIndex(
+      (state) => state.status !== "concluído",
+    );
+
+    if (startIndex === -1) {
+      updateCascadeForPlaylist(playlistId, () => ({
+        index: links.length,
+        downloading: false,
+        paused: false,
+      }));
+      toast.info("Todos os vídeos da playlist já existem na pasta.");
+      return;
+    }
+
     updateCascadeForPlaylist(playlistId, () => ({
-      index: 0,
+      index: startIndex,
       downloading: true,
       paused: false,
     }));
-    await processCascadeFrom(playlistId, links, playlistName, 0, false);
+    await processCascadeFrom(
+      playlistId,
+      links,
+      playlistName,
+      startIndex,
+      false,
+    );
   };
 
   const handlePauseCascade = async (
@@ -514,7 +629,8 @@ const UserPanel: React.FC = () => {
     const resumeIndex = c?.paused ? c.index : pausedIndex;
     if (resumeIndex < 0 || resumeIndex >= links.length) return;
 
-    resumeGuardRef.current[linkKey(playlistId, resumeIndex)] = Date.now() + 30000;
+    resumeGuardRef.current[linkKey(playlistId, resumeIndex)] =
+      Date.now() + 30000;
     setLinkProgress((prev) => ({
       ...prev,
       [linkKey(playlistId, resumeIndex)]: {
@@ -530,11 +646,24 @@ const UserPanel: React.FC = () => {
       downloading: true,
       paused: false,
     }));
-    await processCascadeFrom(playlistId, links, playlistName, resumeIndex, true);
+    await processCascadeFrom(
+      playlistId,
+      links,
+      playlistName,
+      resumeIndex,
+      true,
+    );
   };
 
   const handleLogout = (): void => {
-    navigate("/login");
+    localStorage.removeItem("loginToken");
+    localStorage.removeItem("lastUser");
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "loginToken",
+      }),
+    );
+    navigate("/login", { replace: true });
   };
   const handleGoHome = (): void => {
     navigate("/");
@@ -561,6 +690,27 @@ const UserPanel: React.FC = () => {
     );
     setEditId(playlist.id);
     setShowModal(true);
+  };
+
+  // Confirmar exclusão de playlist
+  const handleDeletePlaylist = async (): Promise<void> => {
+    if (!deleteConfirmId || !username) return;
+    try {
+      const newPlaylists = playlists.filter((pl) => pl.id !== deleteConfirmId);
+      await replacePanelPlaylists(username, newPlaylists);
+      setPlaylists(newPlaylists);
+      setDeleteConfirmId(null);
+      toast.success("Playlist deletada com sucesso!", {
+        position: "top-center",
+        autoClose: 2000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+      });
+    } catch (error) {
+      toast.error(`Erro ao deletar playlist: ${error}`);
+    }
   };
 
   // Adiciona/remover campos de link na modal
@@ -635,7 +785,6 @@ const UserPanel: React.FC = () => {
       closeOnClick: true,
       pauseOnHover: false,
       draggable: false,
-      theme: "dark",
     });
   };
   const handleOpenFolder = (playlistName: string) => {
@@ -643,7 +792,7 @@ const UserPanel: React.FC = () => {
       .then(() => {
         // Mensagem de sucesso já é exibida pelo backend, não exibir nada aqui
       })
-      .catch((e) => {
+      .catch(() => {
         // Mensagem de erro já é exibida pelo backend, não exibir nada aqui
       });
   };
@@ -692,58 +841,68 @@ const UserPanel: React.FC = () => {
             <PlaylistCard key={pl.id}>
               <PlaylistCardHeader>
                 <PlaylistCardTitle>{pl.name}</PlaylistCardTitle>
-                <EditButton onClick={() => openEditModal(pl)}>
-                  Editar
-                </EditButton>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <EditButton onClick={() => openEditModal(pl)}>
+                    Editar
+                  </EditButton>
+                  <DeleteButton onClick={() => setDeleteConfirmId(pl.id)}>
+                    Deletar
+                  </DeleteButton>
+                </div>
               </PlaylistCardHeader>
               <PlaylistLinksLabel>Links:</PlaylistLinksLabel>
               <PlaylistLinksList>
                 {pl.links.length === 0 && <NoLinkItem>Nenhum link</NoLinkItem>}
-                {pl.links.map((link, idx) => (
+                {pl.links.map((link, idx) =>
                   (() => {
                     const p = linkProgress[linkKey(pl.id, idx)];
                     const total = p?.total || 0;
                     const progress = p?.progress || 0;
-                    const percent = total > 0 ? Math.min((progress / total) * 100, 100) : 0;
+                    const percent =
+                      total > 0 ? Math.min((progress / total) * 100, 100) : 0;
                     const status = p?.status || "pendente";
-                    const hasCustomName = Boolean(link.filename && link.filename.trim());
+                    const hasCustomName = Boolean(
+                      link.filename && link.filename.trim(),
+                    );
                     const effectiveName = hasCustomName
                       ? (link.filename || "").trim()
                       : `video_${idx + 1}.mp4`;
                     return (
-                  <PlaylistLinkItem
-                    key={link.id}
-                    style={
-                      cascade && cascade.downloading && cascade.index === idx
-                        ? { borderColor: "#6671d4" }
-                        : {}
-                    }
-                  >
-                    <PlaylistLinkIndex>{idx + 1}</PlaylistLinkIndex>
-                    <PlaylistLinkContent>
-                      <PlaylistUrlText title={link.url}>{link.url}</PlaylistUrlText>
-                      <PlaylistFilenameText>
-                        Nome do arquivo: {effectiveName}
-                        {!hasCustomName ? " (padrão)" : ""}
-                      </PlaylistFilenameText>
-                      <ProgressTrack>
-                        <ProgressFill $percent={percent} $status={status} />
-                      </ProgressTrack>
-                      <ProgressMeta>
-                        {status} - {Math.round(percent)}%
-                      </ProgressMeta>
-                    </PlaylistLinkContent>
-                    {cascade &&
-                      cascade.downloading &&
-                      cascade.index === idx && (
-                        <DownloadingBadge>
-                          (baixando...)
-                        </DownloadingBadge>
-                      )}
-                  </PlaylistLinkItem>
+                      <PlaylistLinkItem
+                        key={link.id}
+                        style={
+                          cascade &&
+                          cascade.downloading &&
+                          cascade.index === idx
+                            ? { borderColor: "#6671d4" }
+                            : {}
+                        }
+                      >
+                        <PlaylistLinkIndex>{idx + 1}</PlaylistLinkIndex>
+                        <PlaylistLinkContent>
+                          <PlaylistUrlText title={link.url}>
+                            {link.url}
+                          </PlaylistUrlText>
+                          <PlaylistFilenameText>
+                            Nome do arquivo: {effectiveName}
+                            {!hasCustomName ? " (padrão)" : ""}
+                          </PlaylistFilenameText>
+                          <ProgressTrack>
+                            <ProgressFill $percent={percent} $status={status} />
+                          </ProgressTrack>
+                          <ProgressMeta>
+                            {status} - {Math.round(percent)}%
+                          </ProgressMeta>
+                        </PlaylistLinkContent>
+                        {cascade &&
+                          cascade.downloading &&
+                          cascade.index === idx && (
+                            <DownloadingBadge>(baixando...)</DownloadingBadge>
+                          )}
+                      </PlaylistLinkItem>
                     );
-                  })()
-                ))}
+                  })(),
+                )}
               </PlaylistLinksList>
               <PlaylistActionsRow>
                 <EditButton
@@ -751,8 +910,10 @@ const UserPanel: React.FC = () => {
                     handleCascadeDownload(pl.id, pl.links, pl.name)
                   }
                   disabled={
-                    pl.links.length === 0 || (cascade && (cascade.downloading || cascade.paused))
+                    pl.links.length === 0 ||
+                    (cascade && (cascade.downloading || cascade.paused))
                   }
+                  style={{ flex: "1 1 auto", minWidth: "140px" }}
                 >
                   <FiDownload size={15} />
                   Baixar em cascata
@@ -764,6 +925,8 @@ const UserPanel: React.FC = () => {
                     background:
                       "linear-gradient(135deg, #ff6b7a 0%, #ff4f67 100%)",
                     color: "#fff",
+                    flex: "1 1 auto",
+                    minWidth: "120px",
                   }}
                 >
                   <FiPause size={15} />
@@ -776,6 +939,8 @@ const UserPanel: React.FC = () => {
                     background:
                       "linear-gradient(135deg, #33d08f 0%, #1ebf7d 100%)",
                     color: "#fff",
+                    flex: "1 1 auto",
+                    minWidth: "120px",
                   }}
                 >
                   <FiPlay size={15} />
@@ -787,22 +952,36 @@ const UserPanel: React.FC = () => {
                     background:
                       "linear-gradient(135deg, #4d63d8 0%, #3f54c7 100%)",
                     color: "#fff",
+                    flex: "1 1 auto",
+                    minWidth: "120px",
                   }}
                 >
                   <FiFolder size={15} />
                   Abrir pasta
                 </EditButton>
-                {cascade && (cascade.downloading || cascade.paused) && (
-                  <CascadeIndicator>
-                    {cascade.paused ? "Pausado em" : "Baixando"} vídeo {Math.min(cascade.index + 1, pl.links.length)} de {pl.links.length}
-                  </CascadeIndicator>
-                )}
               </PlaylistActionsRow>
+              {cascade && (cascade.downloading || cascade.paused) && (
+                <CascadeIndicator style={{ marginTop: "12px" }}>
+                  {cascade.paused ? "Pausado em" : "Baixando"} vídeo{" "}
+                  {Math.min(cascade.index + 1, pl.links.length)} de{" "}
+                  {pl.links.length}
+                </CascadeIndicator>
+              )}
             </PlaylistCard>
           );
         })}
       </PlaylistsWrapper>
-      <ToastContainer />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       {showModal && (
         <ModalOverlay>
           <ModalForm onSubmit={handleSavePlaylist}>
@@ -864,6 +1043,25 @@ const UserPanel: React.FC = () => {
               </CancelButton>
             </ModalActions>
           </ModalForm>
+        </ModalOverlay>
+      )}
+      {deleteConfirmId && (
+        <ModalOverlay onClick={() => setDeleteConfirmId(null)}>
+          <ConfirmModal onClick={(e) => e.stopPropagation()}>
+            <ConfirmTitle>Confirmar exclusão</ConfirmTitle>
+            <ConfirmText>
+              Tem certeza de que deseja deletar esta playlist? Esta ação não
+              pode ser desfeita.
+            </ConfirmText>
+            <ConfirmActions>
+              <ConfirmDeleteButton onClick={() => void handleDeletePlaylist()}>
+                Deletar
+              </ConfirmDeleteButton>
+              <ConfirmCancelButton onClick={() => setDeleteConfirmId(null)}>
+                Cancelar
+              </ConfirmCancelButton>
+            </ConfirmActions>
+          </ConfirmModal>
         </ModalOverlay>
       )}
     </Container>

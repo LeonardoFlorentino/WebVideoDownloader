@@ -48,13 +48,15 @@ pub fn download_hls_file(
         crate::backend::download_progress::remove_progress(progress_key);
     } 
     
-    // Impede múltiplas execuções concorrentes para a mesma URL
+    // Impede múltiplas execuções concorrentes para a mesma URL real do manifest.
+    // Não usamos progress_key aqui porque um master playlist chama recursivamente
+    // uma variant playlist com a mesma progress_key.
     {
         let mut active = ACTIVE_HLS_DOWNLOADS.lock().unwrap();
-        if active.contains(progress_key) {
+        if active.contains(m3u8_url) {
             return Err("Download já em andamento para esta URL".to_string());
         }
-        active.insert(progress_key.to_string());
+        active.insert(m3u8_url.to_string());
     }
     // Emite status 'preparando' imediatamente ao iniciar
     let id_value = id.unwrap_or(0);
@@ -121,7 +123,7 @@ pub fn download_hls_file(
             active.remove(self.url);
         }
     }
-    let _guard = ActiveGuard { url: progress_key };
+    let _guard = ActiveGuard { url: m3u8_url };
     let resp = client.get(m3u8_url)
         .header("Referer", "https://player.jmvstream.com/")
         .send().map_err(|e| format!("Erro ao baixar playlist: {}", e))?;

@@ -51,3 +51,14 @@ pub fn replace_panel_playlists(username: String, playlists: Vec<PanelPlaylist>) 
 
     write_store(&path, &store)
 }
+
+pub fn delete_panel_playlist(username: String, playlist_id: String) -> Result<(), String> {
+    let path = get_panel_playlist_path();
+    let mut store = read_store(&path)?;
+
+    if let Some(entry) = store.users.iter_mut().find(|entry| entry.username == username) {
+        entry.playlists.retain(|p| p.id != playlist_id);
+    }
+
+    write_store(&path, &store)
+}

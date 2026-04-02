@@ -262,6 +262,39 @@ export const EditButton = styled.button`
   }
 `;
 
+export const DeleteButton = styled.button`
+  background: linear-gradient(135deg, #ff6b7a 0%, #ff4f67 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-size: 0.92rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1;
+  cursor: pointer;
+  font-weight: 700;
+  box-shadow: 0 6px 18px #ff6b7a33;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease,
+    opacity 0.2s ease,
+    box-shadow 0.2s ease;
+  &:hover {
+    background: linear-gradient(135deg, #e55a69 0%, #ee3e56 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px #ff6b7a55;
+  }
+  &:disabled {
+    opacity: 0.72;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+`;
+
 export const CreateButton = styled.button`
   background: #6c63ff;
   color: #fff;
@@ -513,5 +546,95 @@ export const ModalActions = styled.div`
 
   @media (max-width: 820px) {
     justify-content: stretch;
+  }
+`;
+
+export const ConfirmModal = styled.div`
+  background: linear-gradient(160deg, #252b66 0%, #1b1f4e 55%, #191f44 100%);
+  border: 1px solid #4f58a0;
+  border-radius: 18px;
+  padding: 40px 36px;
+  max-width: 520px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+`;
+
+export const ConfirmTitle = styled.h2`
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #f7f8ff;
+  margin: 0 0 20px 0;
+  letter-spacing: 0.3px;
+  width: 100%;
+`;
+
+export const ConfirmText = styled.p`
+  font-size: 1.02rem;
+  color: #c3c9ff;
+  margin: 0 0 32px 0;
+  line-height: 1.7;
+  font-weight: 500;
+  width: 100%;
+`;
+
+export const ConfirmActions = styled.div`
+  display: flex;
+  gap: 12px;
+  gap: 16px;
+  justify-content: center;
+  width: 100%;
+`;
+
+export const ConfirmCancelButton = styled.button`
+  background: #363759;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px #23243a33;
+
+  &:hover {
+    background: #4a4a6a;
+    box-shadow: 0 4px 12px #23243a55;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+`;
+
+export const ConfirmDeleteButton = styled.button`
+  background: linear-gradient(135deg, #ff6b7a 0%, #ff4f67 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  padding: 12px 28px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+  box-shadow: 0 4px 14px #ff6b7a40;
+
+  &:hover {
+    background: linear-gradient(135deg, #e55a69 0%, #ee3e56 100%);
+    box-shadow: 0 6px 20px #ff6b7a55;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: scale(0.97);
   }
 `;

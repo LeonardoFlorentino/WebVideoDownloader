@@ -2,6 +2,7 @@ use crate::backend::panel_playlist::PanelPlaylist;
 use crate::backend::panel_playlist_service::{
     get_panel_playlists,
     replace_panel_playlists,
+    delete_panel_playlist,
 };
 use crate::commands::download_manager::CommandResult;
 
@@ -27,6 +28,25 @@ pub fn replace_panel_playlists_command(
     playlists: Vec<PanelPlaylist>,
 ) -> CommandResult<()> {
     match replace_panel_playlists(username, playlists) {
+        Ok(_) => CommandResult {
+            ok: true,
+            data: Some(()),
+            error: None,
+        },
+        Err(error) => CommandResult {
+            ok: false,
+            data: None,
+            error: Some(error),
+        },
+    }
+}
+
+#[tauri::command]
+pub fn delete_playlist_command(
+    username: String,
+    playlist_id: String,
+) -> CommandResult<()> {
+    match delete_panel_playlist(username, playlist_id) {
         Ok(_) => CommandResult {
             ok: true,
             data: Some(()),

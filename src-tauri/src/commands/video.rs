@@ -17,7 +17,25 @@ pub fn download_special_video(
         let progress_key_clone = progress_key.unwrap_or_else(|| url.clone());
         let source_clone = source.unwrap_or_else(|| "home".to_string());
         std::thread::spawn(move || {
-            let client = crate::backend::http_client_helper::create_blocking_client().unwrap();
+            let client = match crate::backend::http_client_helper::create_blocking_client() {
+                Ok(c) => c,
+                Err(_) => {
+                    crate::backend::download_progress::update_progress(
+                        &progress_key_clone,
+                        crate::backend::download_progress::DownloadProgress {
+                            url: url_clone.clone(),
+                            filename: std::path::Path::new(&save_path_clone)
+                                .file_name().and_then(|n| n.to_str()).unwrap_or("video.mp4").to_string(),
+                            total_size: 0,
+                            downloaded: 0,
+                            status: "erro".to_string(),
+                            id: id_clone,
+                            scope: Some(source_clone.clone()),
+                        },
+                    );
+                    return;
+                }
+            };
             let path = std::path::PathBuf::from(&save_path_clone);
             if let Some(parent) = path.parent() {
                 let _ = std::fs::create_dir_all(parent);
@@ -46,17 +64,28 @@ pub struct GetProgressResult {
     pub error: Option<String>,
 }
 
+fn normalize_progress_record(
+    key: &str,
+    mut progress: crate::backend::download_progress::DownloadProgress,
+) -> crate::backend::download_progress::DownloadProgress {
+    if progress.status == "concluído" && progress.total_size == 0 && progress.downloaded > 0 {
+        progress.total_size = progress.downloaded;
+        crate::backend::download_progress::update_progress(key, progress.clone());
+    }
+    progress
+}
+
 #[tauri::command]
 pub fn get_progress_command(url: Option<String>, progress_key: Option<String>) -> GetProgressResult {
     let lookup_key = progress_key.or(url.clone());
 
     match lookup_key
         .as_deref()
-        .and_then(crate::backend::download_progress::get_progress)
+        .and_then(|key| crate::backend::download_progress::get_progress(key).map(|progress| (key, progress)))
     {
-        Some(progress) => GetProgressResult {
+        Some((key, progress)) => GetProgressResult {
             ok: true,
-            data: Some(progress),
+            data: Some(normalize_progress_record(key, progress)),
             error: None,
         },
         None => GetProgressResult {
@@ -64,6 +93,59 @@ pub fn get_progress_command(url: Option<String>, progress_key: Option<String>) -
             data: None,
             error: Some("No progress found for URL".to_string()),
         },
+    }
+}
+
+#[tauri::command]
+pub fn sync_download_file_state_command(
+    url: String,
+    save_path: String,
+    progress_key: Option<String>,
+    source: Option<String>,
+) -> GetProgressResult {
+    let lookup_key = progress_key.unwrap_or_else(|| url.clone());
+    let path = std::path::Path::new(&save_path);
+    let filename = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("video.mp4")
+        .to_string();
+    let scope = source.unwrap_or_else(|| "home".to_string());
+
+    if path.exists() {
+        let size = std::fs::metadata(path).map(|meta| meta.len()).unwrap_or(0);
+        if size > 0 {
+            let progress = crate::backend::download_progress::DownloadProgress {
+                url: url.clone(),
+                filename,
+                total_size: size,
+                downloaded: size,
+                status: "concluído".to_string(),
+                id: None,
+                scope: Some(scope),
+            };
+            crate::backend::download_progress::update_progress(&lookup_key, progress.clone());
+            return GetProgressResult {
+                ok: true,
+                data: Some(normalize_progress_record(&lookup_key, progress)),
+                error: None,
+            };
+        }
+    }
+
+    crate::backend::download_progress::remove_progress(&lookup_key);
+    GetProgressResult {
+        ok: true,
+        data: Some(crate::backend::download_progress::DownloadProgress {
+            url,
+            filename,
+            total_size: 0,
+            downloaded: 0,
+            status: "pendente".to_string(),
+            id: None,
+            scope: Some(scope),
+        }),
+        error: None,
     }
 }
 #[cfg(test)]
@@ -221,7 +303,7 @@ pub async fn start_download(
                 save_path_clone.clone()
             }
         };
-        let current_size = if std::path::Path::new(&save_path_clone).exists() {
+        let mut current_size = if std::path::Path::new(&save_path_clone).exists() {
             std::fs::metadata(&save_path_clone).map(|m| m.len()).unwrap_or(0)
         } else {
             0
@@ -252,7 +334,37 @@ pub async fn start_download(
                 return;
             }
         };
-                let mut total_size = response.content_length()
+        let status_code = response.status();
+        if !status_code.is_success() {
+            crate::backend::download_progress::update_progress(
+                &progress_key_clone,
+                build_progress(current_size, 0, "erro"),
+            );
+            let _ = app_clone.emit_to("all", "download_finished", serde_json::json!({
+                "url": url_clone,
+                "status": "erro",
+                "error": format!("HTTP {}", status_code)
+            }));
+            return;
+        }
+
+        let range_respected = current_size == 0
+            || status_code == reqwest::StatusCode::PARTIAL_CONTENT;
+
+        // Alguns servidores ignoram o header Range e respondem 200 com o arquivo inteiro.
+        // Nesses casos, reinicia o arquivo do zero para evitar conteúdo duplicado/corrompido.
+        if current_size > 0 && !range_respected {
+            current_size = 0;
+        }
+
+        let mut total_size = response.content_length()
+            .map(|len| {
+                if current_size > 0 && status_code == reqwest::StatusCode::PARTIAL_CONTENT {
+                    current_size + len
+                } else {
+                    len
+                }
+            })
             .or_else(|| {
                 response.headers().get("content-range")
                     .and_then(|v| v.to_str().ok())
@@ -275,11 +387,15 @@ pub async fn start_download(
                 return;
             }
         }
-        let mut file = match std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&save_path_clone)
-        {
+        let mut open_options = std::fs::OpenOptions::new();
+        open_options.create(true).write(true);
+        if current_size > 0 && status_code == reqwest::StatusCode::PARTIAL_CONTENT {
+            open_options.append(true);
+        } else {
+            open_options.truncate(true);
+        }
+
+        let mut file = match open_options.open(&save_path_clone) {
             Ok(f) => f,
             Err(e) => {
                 let _ = app_clone.emit_to("all", "download_finished", serde_json::json!({
@@ -399,11 +515,22 @@ pub async fn start_download(
         }
 
         if !write_buffer.is_empty() {
-            let _ = file.write_all(&write_buffer);
+            if let Err(e) = file.write_all(&write_buffer) {
+                crate::backend::download_progress::update_progress(
+                    &progress_key_clone,
+                    build_progress(downloaded, total_size, "erro"),
+                );
+                let _ = app_clone.emit_to("all", "download_finished", serde_json::json!({
+                    "url": url_clone,
+                    "status": "erro",
+                    "error": e.to_string()
+                }));
+                return;
+            }
         }
         crate::backend::download_progress::update_progress(
             &progress_key_clone,
-            build_progress(downloaded, total_size, "concluído"),
+            build_progress(downloaded, total_size.max(downloaded), "concluído"),
         );
         if source_clone == "home" {
             let progress = if total_size > 0 {

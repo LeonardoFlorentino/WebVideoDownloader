@@ -4,17 +4,22 @@
       "username": "Leonardo",
       "playlists": [
         {
-          "id": "1775025575653",
-          "name": "Grego Moderno",
+          "id": "1775103547013",
+          "name": "Vídeos Diversos",
           "links": [
             {
-              "id": "17750273809970.8812078938692157",
-              "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/ir2643ep60a1x1b/h/4/1080/chunck_list_JMV.m3u8",
+              "id": "17751035470130.4386406218310046",
+              "url": "https://ia801903.us.archive.org/32/items/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
               "filename": ""
             },
             {
-              "id": "17750273809970.39423642046217766",
-              "url": "https://cdn.vod.br1.jmvstream.com/vod/vod_10574/f/2vh1dum2yx21024/h/4/1080/chunck_list_JMV.m3u8",
+              "id": "17751035470130.46129009954257216",
+              "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+              "filename": ""
+            },
+            {
+              "id": "17751035470130.7036906659331044",
+              "url": "https://filesamples.com/samples/video/mp4/sample_640x360.mp4",
               "filename": ""
             }
           ]
